@@ -1,22 +1,47 @@
-#include <ros/ros.h>
-#include <ros/package.h>
 
 #include <fstream>
 #include <string>
 #include <iostream> // debug
 #include <random>
 
+#include <ros/ros.h>
+#include <ros/package.h>
+#include <dynamic_reconfigure/server.h>
+#include <robot_faces/ParametersConfig.h>
 
 #include <SFML/Graphics.hpp>
 // #include <SFML/Graphics/CircleShape.hpp>
+
+
+// debug variables
+bool PRINT_DEBUG_MESS = true;
 
 int g_window_width = 800;
 int g_window_height = 600;
 
 
+void dynamic_reconfigure_cb(robot_faces::ParametersConfig &config, uint32_t level) {
+
+
+  if(PRINT_DEBUG_MESS) {
+    ROS_INFO("Reconfigure Request");
+  }
+
+
+}
+
+
+
 int main(int argc, char **argv) {
 
   ros::init(argc, argv, "robot_face");
+
+
+  dynamic_reconfigure::Server<robot_faces::ParametersConfig> server;
+  dynamic_reconfigure::Server<robot_faces::ParametersConfig>::CallbackType f;
+
+  f = boost::bind(&dynamic_reconfigure_cb, _1, _2);
+  server.setCallback(f);
 
 
 
