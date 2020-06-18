@@ -4,38 +4,44 @@ robot_faces is a ROS package for rendering animated robot faces. Almost everythi
 
 ## Dependencies
 
-We use SFML to render animations. It does not come with a FindSFML.cmake so I added one in the camke/ directory.
+We use SFML to render animations. It does not come with a FindSFML.cmake so I added one in the cmake/ directory.
 
-# Parameters
+## Parameters
 
 The visual appearance of the face can be reconfigured and changed through parameters set through dynamic_recofigure. This can be done through the CLI, your own dynamic_recofigure client or the rqt_reconfigure GUI - which can be started by running `rosrun rqt_reconfigure rqt_reconfigure`.
 
 Parameters are organised into groups such as positioning, scaling and behaviour.
 
-| Parameter name | Description |
-| -------------- | ----------- |
-| iris_shape     | TODO |
-| iris_colour    | TODO |
-| eyebrow_shape  | TODO |
-| mouth_shape    | TODO |
-| mouth_scaling  | TODO |
-| window_width   | TODO |
-| window_height  | TODO |
+### Positioning group
 
 
-# API
+| Parameter name  | Description                                                    | default | min | max |
+| --------------- | -------------------------------------------------------------- | ------- | --- | --- |
+| eye_spacing     | Spacing between eyes as a percetange of width                  | 0.5     | 0.0 | 1.0 |
+| eye_height      | Height of eyes from top as a percetange of height              | 0.25    | 0.0 | 1.0 |
+| eyebrow_spacing | Spacing between eyes and eyebrows as a percetange of height    | 0.2     | 0.0 | 1.0 |
+| nose_height     | Height of nose from top between eyes as a percetange of height | 0.5     | 0.0 | 1.0 |
+| mouth_height    | Height of mouth from tops as a percetange of height            | 0.75    | 0.0 | 1.0 |
+
+## API
 
 The faces can be interacted with through ROS topics and services.
 
-# TODO
+## TODO
 
 * Github issue and feature request template.
 
 * Anti-aliasing setting.
 
+* Add image of possible faces to README.
+
 ## Ideas
 
 * Include face parameter presets.
+
+## Notes
+
+Would like a way to parameterise the window dimensions but need to figure out a way to dynamically resize an SFML window.
 
 ## Authors
 

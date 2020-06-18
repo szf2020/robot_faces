@@ -15,9 +15,23 @@
 
 // debug variables
 bool PRINT_DEBUG_MESS = true;
+bool DRAW_REFERENCE_MARKERS = true;
 
 int g_window_width = 800;
 int g_window_height = 600;
+
+
+// positioning
+float eye_spacing = 0.5f;
+float eye_height = 0.35f;
+float eyebrow_spacing = 0.2f;
+float nose_height = 0.5f;
+float mouth_height = 0.75f;
+
+// debug markers
+const sf::Color REFERENCE_MARKER_COLOUR(0, 255, 0, 255);
+const int REFERENCE_MARKER_RADIUS = 5;
+sf::CircleShape reference_marker;
 
 
 void dynamic_reconfigure_cb(robot_faces::ParametersConfig &config, uint32_t level) {
@@ -26,6 +40,13 @@ void dynamic_reconfigure_cb(robot_faces::ParametersConfig &config, uint32_t leve
   if(PRINT_DEBUG_MESS) {
     ROS_INFO("Reconfigure Request");
   }
+
+  // positioning
+  eye_spacing = config.eye_spacing;
+  eye_height = config.eye_height;
+  eyebrow_spacing = config.eyebrow_spacing;
+  nose_height = config.nose_height;
+  mouth_height = config.mouth_height;
 
 
 }
@@ -54,7 +75,9 @@ int main(int argc, char **argv) {
   // sometimes vertical synchronistion is forced off by the graphic card so fall back to limiting the framerate to a reasonable figure.
   // renderWindow.setFramerateLimit(30);
 
-
+  reference_marker.setRadius(REFERENCE_MARKER_RADIUS);
+  reference_marker.setOrigin(REFERENCE_MARKER_RADIUS, REFERENCE_MARKER_RADIUS);
+  reference_marker.setFillColor(REFERENCE_MARKER_COLOUR);
 
 
   sf::Event event;
@@ -67,6 +90,60 @@ int main(int argc, char **argv) {
         if(event.type == sf::Event::Closed) {
           renderWindow.close();
         }
+    }
+
+    //TODO
+    // CLEAR BACKGROUND WITH COLOUR
+
+
+    // calculate reference points
+    int left_eye_reference_x = int(0.5f*(g_window_width-eye_spacing*g_window_width));
+    int right_eye_reference_x = int(g_window_width-0.5f*(g_window_width-eye_spacing*g_window_width));
+    int eye_reference_y = int(eye_height*g_window_height);
+
+    int nose_reference_x = int(0.5f*g_window_width);
+    int nose_reference_y = int(nose_height*g_window_height);
+
+    int eyebrow_reference_y = int(eye_height*g_window_height-eyebrow_spacing*g_window_height);
+
+    int mouth_reference_x = int(0.5f*g_window_width);
+    int mouth_reference_y = int(mouth_height*g_window_height);
+
+    /*
+    TODO
+    RENDER FACE HERE
+    */
+
+
+    /*
+    debug markers
+    */
+    if(DRAW_REFERENCE_MARKERS) {
+
+      // left eye reference mark
+      reference_marker.setPosition(left_eye_reference_x, eye_reference_y);
+      renderWindow.draw(reference_marker);
+
+      // right eye reference mark
+      reference_marker.setPosition(right_eye_reference_x, eye_reference_y);
+      renderWindow.draw(reference_marker);
+
+      // left eyebrow reference mark
+      reference_marker.setPosition(left_eye_reference_x, eyebrow_reference_y);
+      renderWindow.draw(reference_marker);
+
+      // right eyebrow reference mark
+      reference_marker.setPosition(right_eye_reference_x, eyebrow_reference_y);
+      renderWindow.draw(reference_marker);
+
+      // nose reference mark
+      reference_marker.setPosition(nose_reference_x, nose_reference_y);
+      renderWindow.draw(reference_marker);
+
+      // mouth reference mark
+      reference_marker.setPosition(mouth_reference_x, mouth_reference_y);
+      renderWindow.draw(reference_marker);
+
     }
 
 
