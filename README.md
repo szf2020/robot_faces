@@ -12,8 +12,7 @@ The visual appearance of the face can be reconfigured and changed through parame
 
 Parameters are organised into groups such as positioning, scaling and behaviour.
 
-### Positioning group
-
+#### Positioning parameter group
 
 | Parameter name  | Description                                                    | default | min | max |
 | --------------- | -------------------------------------------------------------- | ------- | --- | --- |
@@ -22,6 +21,18 @@ Parameters are organised into groups such as positioning, scaling and behaviour.
 | eyebrow_spacing | Spacing between eyes and eyebrows as a percetange of height    | 0.2     | 0.0 | 1.0 |
 | nose_height     | Height of nose from top between eyes as a percetange of height | 0.5     | 0.0 | 1.0 |
 | mouth_height    | Height of mouth from tops as a percetange of height            | 0.75    | 0.0 | 1.0 |
+
+#### Colours parameter group
+
+| Parameter name    | Description                                   | default           |
+| ----------------- | --------------------------------------------- | ----------------- |
+| background_colour | Comma delimited RGBA string of the background | "255,255,255,255" |
+| nose_colour       | Comma delimited RGBA string of the nose       | "41,41,41,255"    |
+| pupil_colour      | Comma delimited RGBA string of the pupil      | "0,0,0,255"       |
+| iris_colour       | Comma delimited RGBA string of the iris       | "139,69,19,255"   |
+| eyebrow_colour    | Comma delimited RGBA string of the eyebrow    | "34,27,7,255"     |
+
+
 
 ## API
 
@@ -34,6 +45,8 @@ The faces can be interacted with through ROS topics and services.
 * Anti-aliasing setting.
 
 * Add image of possible faces to README.
+
+* Add tests for regex validation of colour parameters.
 
 ## Ideas
 

@@ -12,6 +12,7 @@
 #include <SFML/Graphics.hpp>
 // #include <SFML/Graphics/CircleShape.hpp>
 
+#include "robot_faces/utility.h"
 
 // debug variables
 bool PRINT_DEBUG_MESS = true;
@@ -27,6 +28,14 @@ float eye_height = 0.35f;
 float eyebrow_spacing = 0.2f;
 float nose_height = 0.5f;
 float mouth_height = 0.75f;
+
+
+// colours
+sf::Color background_colour(255,255,255,255);
+sf::Color nose_colour(41,41,41,255);
+sf::Color pupil_colour(0,0,0,255);
+sf::Color iris_colour(139,69,19,255);
+sf::Color eyebrow_colour(34,27,7,255);
 
 // debug markers
 const sf::Color REFERENCE_MARKER_COLOUR(0, 255, 0, 255);
@@ -47,6 +56,13 @@ void dynamic_reconfigure_cb(robot_faces::ParametersConfig &config, uint32_t leve
   eyebrow_spacing = config.eyebrow_spacing;
   nose_height = config.nose_height;
   mouth_height = config.mouth_height;
+
+  // colours
+  updateColour(background_colour, config.background_colour);
+  updateColour(nose_colour, config.nose_colour);
+  updateColour(eyebrow_colour, config.eyebrow_colour);
+  updateColour(iris_colour, config.iris_colour);
+  updateColour(pupil_colour, config.pupil_colour);
 
 
 }
@@ -92,11 +108,8 @@ int main(int argc, char **argv) {
         }
     }
 
-    //TODO
-    // CLEAR BACKGROUND WITH COLOUR
 
-
-    // calculate reference points
+    // calculate reference points for positioning
     int left_eye_reference_x = int(0.5f*(g_window_width-eye_spacing*g_window_width));
     int right_eye_reference_x = int(g_window_width-0.5f*(g_window_width-eye_spacing*g_window_width));
     int eye_reference_y = int(eye_height*g_window_height);
@@ -108,6 +121,12 @@ int main(int argc, char **argv) {
 
     int mouth_reference_x = int(0.5f*g_window_width);
     int mouth_reference_y = int(mouth_height*g_window_height);
+
+
+    // colours
+    renderWindow.clear(background_colour);
+    // TODO FILL ELEMENTS WITH COLOUR HERE
+
 
     /*
     TODO
