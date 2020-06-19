@@ -12,6 +12,12 @@ The visual appearance of the face can be reconfigured and changed through parame
 
 Parameters are organised into groups such as positioning, scaling and behaviour.
 
+#### Misc
+
+| Parameter name  | Description                                                     | default | min | max |
+| --------------- | --------------------------------------------------------------- | ------- | --- | --- |
+| nose_shape      | Enum describing the nose (none, annulus, button, curve and dog) | None    |     |     |
+
 #### Positioning parameter group
 
 | Parameter name  | Description                                                    | default | min | max |
@@ -47,6 +53,10 @@ The faces can be interacted with through ROS topics and services.
 * Add image of possible faces to README.
 
 * Add tests for regex validation of colour parameters.
+
+* Add light highlight to nose.
+
+* Scaling parameters
 
 ## Ideas
 
