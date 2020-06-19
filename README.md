@@ -18,6 +18,8 @@ Parameters are organised into groups such as positioning, scaling and behaviour.
 | ------------------- | ----------------------------------------------------------------- | ------- | --- | --- |
 | nose_shape          | Enum describing the nose (none, annulus, button, curve and dog)   | None    |     |     |
 | pupil_corner_radius | Corner radius of pupil: 0.0 is a straight corner, 1.0 is a circle | 1.0     | 0.0 | 1.0 |
+| iris_shape          | Enum for the iris shape (rounded rect, thick, oval, almond, arc)  | None    |     |     |
+| iris_corner_radius  | Corner radius of iris: 0.0 is a straight corner, 1.0 is a circle  | 1.0     | 0.0 | 1.0 |
 
 
 
@@ -59,7 +61,13 @@ The faces can be interacted with through ROS topics and services.
 
 * Add light highlight to nose.
 
-* Scaling parameters
+* Scaling parameters.
+
+* Add light highlights to iris and pupil.
+
+* Make nose a rounded rectangle.
+
+* toggle pupil, iris, nose, eyebrows, mouth draw option
 
 ## Ideas
 

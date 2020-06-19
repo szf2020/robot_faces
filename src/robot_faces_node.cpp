@@ -19,7 +19,7 @@
 debug variables
 */
 bool PRINT_DEBUG_MESS = true;
-bool DRAW_REFERENCE_MARKERS = true;
+bool DRAW_REFERENCE_MARKERS = false;
 
 /*
 parameters
@@ -49,7 +49,7 @@ sf elements
 */
 
 // nose
-enum NoseShape { NO_NOSE, ANNULUS, BUTTON, CURVE, INVERTED_TRIANGLE } noseShape = BUTTON;
+enum NoseShape { NO_NOSE, ANNULUS, BUTTON, CURVE, INVERTED_TRIANGLE } noseShape = NO_NOSE;
 
 int nose_radius = int(g_window_width/15.0f); //TODO a better way of initialising this?
 
@@ -62,11 +62,69 @@ sf::RoundedRectangle pupil_shape;
 int pupil_radius = int(g_window_width/15.0f);
 float pupil_corner_radius = 1.0f;
 
+// iris
+enum IrisShape { ROUNDED_RECTANGLE, THICK, OVAL, ALMOND, ARC } irisShape = ROUNDED_RECTANGLE;
+sf::RoundedRectangle iris_shape;
+int iris_diameter = int(g_window_width/7.0f);
+float iris_corner_radius = 1.0f;
+sf::VertexArray iris_points(sf::TrianglesFan);
 
 // debug markers
 const sf::Color REFERENCE_MARKER_COLOUR(0, 255, 0, 255);
 const int REFERENCE_MARKER_RADIUS = 5;
 sf::CircleShape reference_marker;
+
+
+void computeIrisPoints() {
+
+
+
+  std::string filename = "";
+  if(irisShape==THICK) {
+    filename="iris_thick";
+  } else if(irisShape==OVAL) {
+    filename="iris_oval";
+  } else if(irisShape==ALMOND) {
+    filename="iris_almond";
+  } else if(irisShape==ARC) {
+    filename="iris_arc";
+  } else {
+    return;
+  }
+  iris_points.clear();
+  sf::Vector2f initial_position{0, 0};
+  std::string package_path = ros::package::getPath("robot_faces");
+
+  std::ifstream file(package_path+"/res/"+filename+".txt", std::ifstream::in);
+
+  std::string line, x, y;
+  if(!getline(file, line)) {
+    ROS_ERROR("Could not open file");
+  }
+  std::stringstream liness(line);
+
+  iris_points.append(sf::Vertex(sf::Vector2f(initial_position.x, initial_position.y), iris_colour));
+
+  while (getline(file, line)) {
+      std::stringstream liness(line);
+      getline(liness, x, ',');
+      getline(liness, y);
+
+
+      float x_point = strtof(x.c_str(),0);
+      float y_point = strtof(y.c_str(),0);
+
+      // each of the drawings is 100px wide so we scale it by whatever the default width of the eyes is
+      x_point *= iris_diameter/100.f;
+      y_point *= iris_diameter/100.f;
+
+      x_point = (float) initial_position.x + x_point;
+      y_point = (float) initial_position.y + y_point;
+      iris_points.append(sf::Vertex(sf::Vector2f(x_point, y_point), iris_colour));
+  }
+  file.close();
+
+}
 
 
 
@@ -101,8 +159,8 @@ void computeNoseInvertedTrianglePoints() {
   }
   file.close();
 
-
 }
+
 
 void computeNoseCurvePoints() {
 
@@ -143,10 +201,15 @@ void dynamic_reconfigure_cb(robot_faces::ParametersConfig &config, uint32_t leve
   }
 
 
+  irisShape = static_cast<IrisShape>(config.iris_shape);
+
   noseShape = static_cast<NoseShape>(config.nose_shape);
 
   pupil_corner_radius = config.pupil_corner_radius;
-  pupil_shape.setCornersRadius(pupil_corner_radius* pupil_radius/2.0f);
+  pupil_shape.setCornersRadius(pupil_corner_radius*pupil_radius/2.0f);
+
+  iris_corner_radius = config.iris_corner_radius;
+  iris_shape.setCornersRadius(iris_corner_radius*iris_diameter/2.0f);
 
   // positioning
   eye_spacing = config.eye_spacing;
@@ -168,6 +231,8 @@ void dynamic_reconfigure_cb(robot_faces::ParametersConfig &config, uint32_t leve
   updateColour(eyebrow_colour, config.eyebrow_colour);
 
   updateColour(iris_colour, config.iris_colour);
+  iris_shape.setFillColor(iris_colour);
+  computeIrisPoints();
 
   updateColour(pupil_colour, config.pupil_colour);
   pupil_shape.setFillColor(pupil_colour);
@@ -232,6 +297,14 @@ int main(int argc, char **argv) {
   pupil_shape.setCornerPointCount(20);
   pupil_shape.setFillColor(pupil_colour);
 
+  //iris
+  iris_shape.setSize(sf::Vector2f(iris_diameter, iris_diameter));
+  iris_shape.setOrigin(iris_diameter/2.0f, iris_diameter/2.0f);
+  iris_shape.setCornersRadius(iris_corner_radius*iris_diameter/2.0f);
+  iris_shape.setCornerPointCount(20);
+  iris_shape.setFillColor(iris_colour);
+
+  computeIrisPoints();
 
 
 
@@ -280,8 +353,37 @@ int main(int argc, char **argv) {
     RENDER FACE HERE
     */
 
-    // nose
 
+    // iris
+    if(irisShape==THICK || irisShape==OVAL || irisShape==ALMOND || irisShape==ARC) {
+      sf::Transform t;
+      //TODO SCALE
+      t.translate(left_eye_reference_x, eye_reference_y);
+      renderWindow.draw(iris_points, t);
+
+      t = sf::Transform(-1.f, 0.f, right_eye_reference_x,
+                       0.f,  1.f, eye_reference_y,
+                       0.f,  0.f, 1.f);
+
+      renderWindow.draw(iris_points, t);
+
+    } else {
+      iris_shape.setPosition(left_eye_reference_x, eye_reference_y);
+      renderWindow.draw(iris_shape);
+      iris_shape.setPosition(right_eye_reference_x, eye_reference_y);
+      renderWindow.draw(iris_shape);
+    }
+
+
+
+
+    // pupils
+    pupil_shape.setPosition(left_eye_reference_x, eye_reference_y);
+    renderWindow.draw(pupil_shape);
+    pupil_shape.setPosition(right_eye_reference_x, eye_reference_y);
+    renderWindow.draw(pupil_shape);
+
+    // nose
     switch(noseShape) {
 
       case NO_NOSE:
@@ -330,11 +432,7 @@ int main(int argc, char **argv) {
       break;
     }
 
-    // pupils
-    pupil_shape.setPosition(left_eye_reference_x, eye_reference_y);
-    renderWindow.draw(pupil_shape);
-    pupil_shape.setPosition(right_eye_reference_x, eye_reference_y);
-    renderWindow.draw(pupil_shape);
+
 
 
     /*
