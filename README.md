@@ -14,9 +14,12 @@ Parameters are organised into groups such as positioning, scaling and behaviour.
 
 #### Misc
 
-| Parameter name  | Description                                                     | default | min | max |
-| --------------- | --------------------------------------------------------------- | ------- | --- | --- |
-| nose_shape      | Enum describing the nose (none, annulus, button, curve and dog) | None    |     |     |
+| Parameter name      | Description                                                       | default | min | max |
+| ------------------- | ----------------------------------------------------------------- | ------- | --- | --- |
+| nose_shape          | Enum describing the nose (none, annulus, button, curve and dog)   | None    |     |     |
+| pupil_corner_radius | Corner radius of pupil: 0.0 is a straight corner, 1.0 is a circle | 1.0     | 0.0 | 1.0 |
+
+
 
 #### Positioning parameter group
 

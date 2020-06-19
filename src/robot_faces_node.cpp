@@ -57,8 +57,10 @@ sf::CircleShape nose_annulus, left_nose_curve_fillet, right_nose_curve_fillet;
 sf::VertexArray nose_curve_points(sf::TrianglesStrip);
 sf::VertexArray nose_inverted_triangle_points(sf::TrianglesFan);
 
-
-
+// pupil
+sf::RoundedRectangle pupil_shape;
+int pupil_radius = int(g_window_width/15.0f);
+float pupil_corner_radius = 1.0f;
 
 
 // debug markers
@@ -143,6 +145,9 @@ void dynamic_reconfigure_cb(robot_faces::ParametersConfig &config, uint32_t leve
 
   noseShape = static_cast<NoseShape>(config.nose_shape);
 
+  pupil_corner_radius = config.pupil_corner_radius;
+  pupil_shape.setCornersRadius(pupil_corner_radius* pupil_radius/2.0f);
+
   // positioning
   eye_spacing = config.eye_spacing;
   eye_height = config.eye_height;
@@ -152,17 +157,22 @@ void dynamic_reconfigure_cb(robot_faces::ParametersConfig &config, uint32_t leve
 
   // colours
   updateColour(background_colour, config.background_colour);
-  updateColour(nose_colour, config.nose_colour);
-  updateColour(eyebrow_colour, config.eyebrow_colour);
-  updateColour(iris_colour, config.iris_colour);
-  updateColour(pupil_colour, config.pupil_colour);
 
-  // TODO FILL ELEMENTS WITH COLOUR HERE
+  updateColour(nose_colour, config.nose_colour);
   nose_annulus.setFillColor(nose_colour);
   left_nose_curve_fillet.setFillColor(nose_colour);
   right_nose_curve_fillet.setFillColor(nose_colour);
   computeNoseCurvePoints();
   computeNoseInvertedTrianglePoints();
+
+  updateColour(eyebrow_colour, config.eyebrow_colour);
+
+  updateColour(iris_colour, config.iris_colour);
+
+  updateColour(pupil_colour, config.pupil_colour);
+  pupil_shape.setFillColor(pupil_colour);
+
+
 
 
 }
@@ -214,6 +224,13 @@ int main(int argc, char **argv) {
   computeNoseCurvePoints();
 
   computeNoseInvertedTrianglePoints();
+
+  // pupil
+  pupil_shape.setSize(sf::Vector2f(pupil_radius, pupil_radius));
+  pupil_shape.setOrigin(pupil_radius/2.0f, pupil_radius/2.0f);
+  pupil_shape.setCornersRadius(pupil_corner_radius* pupil_radius/2.0f);
+  pupil_shape.setCornerPointCount(20);
+  pupil_shape.setFillColor(pupil_colour);
 
 
 
@@ -312,6 +329,13 @@ int main(int argc, char **argv) {
         renderWindow.draw(nose_inverted_triangle_points, t);
       break;
     }
+
+    // pupils
+    pupil_shape.setPosition(left_eye_reference_x, eye_reference_y);
+    renderWindow.draw(pupil_shape);
+    pupil_shape.setPosition(right_eye_reference_x, eye_reference_y);
+    renderWindow.draw(pupil_shape);
+
 
     /*
     debug markers
