@@ -16,9 +16,9 @@ Parameters are organised into groups such as positioning, scaling and behaviour.
 
 | Parameter name      | Description                                                       | default | min | max |
 | ------------------- | ----------------------------------------------------------------- | ------- | --- | --- |
-| nose_shape          | Enum describing the nose (none, annulus, button, curve and dog)   | None    |     |     |
+| nose_shape          | Enum describing the nose (annulus, button, curve and dog)         | button  |     |     |
 | pupil_corner_radius | Corner radius of pupil: 0.0 is a straight corner, 1.0 is a circle | 1.0     | 0.0 | 1.0 |
-| iris_shape          | Enum for the iris shape (rounded rect, thick, oval, almond, arc)  | None    |     |     |
+| iris_shape          | Enum for the iris shape (rounded rect, thick, oval, almond, arc)  | circle  |     |     |
 | iris_corner_radius  | Corner radius of iris: 0.0 is a straight corner, 1.0 is a circle  | 1.0     | 0.0 | 1.0 |
 
 
@@ -33,6 +33,7 @@ Parameters are organised into groups such as positioning, scaling and behaviour.
 | nose_height     | Height of nose from top between eyes as a percetange of height | 0.5     | 0.0 | 1.0 |
 | mouth_height    | Height of mouth from tops as a percetange of height            | 0.75    | 0.0 | 1.0 |
 
+
 #### Colours parameter group
 
 | Parameter name    | Description                                   | default           |
@@ -42,6 +43,17 @@ Parameters are organised into groups such as positioning, scaling and behaviour.
 | pupil_colour      | Comma delimited RGBA string of the pupil      | "0,0,0,255"       |
 | iris_colour       | Comma delimited RGBA string of the iris       | "139,69,19,255"   |
 | eyebrow_colour    | Comma delimited RGBA string of the eyebrow    | "34,27,7,255"     |
+
+
+#### Display toggles parameter group
+
+| Parameter name | Description                    | default |
+| -------------- | ------------------------------ | ------- |
+| show_eybrows   | Whether to render the eyebrows | True    |
+| show_iris      | Whether to render the iris     | True    |
+| show_pupil     | Whether to render the pupil    | True    |
+| show_nose      | Whether to render the nose     | False   |
+| show_mouth     | Whether to render the mouth    | True    |
 
 
 
@@ -66,8 +78,6 @@ The faces can be interacted with through ROS topics and services.
 * Add light highlights to iris and pupil.
 
 * Make nose a rounded rectangle.
-
-* toggle pupil, iris, nose, eyebrows, mouth draw option
 
 ## Ideas
 

@@ -41,6 +41,13 @@ sf::Color pupil_colour(0,0,0,255);
 sf::Color iris_colour(139,69,19,255);
 sf::Color eyebrow_colour(34,27,7,255);
 
+// display toggles
+bool show_eybrows = true;
+bool show_iris = true;
+bool show_pupil = true;
+bool show_nose = false;
+bool show_mouth = true;
+
 // scaling
 float nose_scale = 1.0f; //TODO ADD THIS TO PARAMETERS
 
@@ -49,7 +56,7 @@ sf elements
 */
 
 // nose
-enum NoseShape { NO_NOSE, ANNULUS, BUTTON, CURVE, INVERTED_TRIANGLE } noseShape = NO_NOSE;
+enum NoseShape { ANNULUS, BUTTON, CURVE, INVERTED_TRIANGLE } noseShape = BUTTON;
 
 int nose_radius = int(g_window_width/15.0f); //TODO a better way of initialising this?
 
@@ -237,7 +244,13 @@ void dynamic_reconfigure_cb(robot_faces::ParametersConfig &config, uint32_t leve
   updateColour(pupil_colour, config.pupil_colour);
   pupil_shape.setFillColor(pupil_colour);
 
+  // display toggles
 
+  show_eybrows = config.show_eybrows;
+  show_iris = config.show_iris;
+  show_pupil = config.show_pupil;
+  show_nose = config.show_nose;
+  show_mouth = config.show_mouth;
 
 
 }
@@ -355,84 +368,100 @@ int main(int argc, char **argv) {
 
 
     // iris
-    if(irisShape==THICK || irisShape==OVAL || irisShape==ALMOND || irisShape==ARC) {
-      sf::Transform t;
-      //TODO SCALE
-      t.translate(left_eye_reference_x, eye_reference_y);
-      renderWindow.draw(iris_points, t);
+    if(show_iris) {
 
-      t = sf::Transform(-1.f, 0.f, right_eye_reference_x,
-                       0.f,  1.f, eye_reference_y,
-                       0.f,  0.f, 1.f);
+      if(irisShape==THICK || irisShape==OVAL || irisShape==ALMOND || irisShape==ARC) {
+        sf::Transform t;
+        //TODO SCALE
+        t.translate(left_eye_reference_x, eye_reference_y);
+        renderWindow.draw(iris_points, t);
 
-      renderWindow.draw(iris_points, t);
+        t = sf::Transform(-1.f, 0.f, right_eye_reference_x,
+                         0.f,  1.f, eye_reference_y,
+                         0.f,  0.f, 1.f);
 
-    } else {
-      iris_shape.setPosition(left_eye_reference_x, eye_reference_y);
-      renderWindow.draw(iris_shape);
-      iris_shape.setPosition(right_eye_reference_x, eye_reference_y);
-      renderWindow.draw(iris_shape);
+        renderWindow.draw(iris_points, t);
+
+      } else {
+        iris_shape.setPosition(left_eye_reference_x, eye_reference_y);
+        renderWindow.draw(iris_shape);
+        iris_shape.setPosition(right_eye_reference_x, eye_reference_y);
+        renderWindow.draw(iris_shape);
+      }
+
     }
 
 
-
-
     // pupils
-    pupil_shape.setPosition(left_eye_reference_x, eye_reference_y);
-    renderWindow.draw(pupil_shape);
-    pupil_shape.setPosition(right_eye_reference_x, eye_reference_y);
-    renderWindow.draw(pupil_shape);
+    if(show_pupil) {
+
+      pupil_shape.setPosition(left_eye_reference_x, eye_reference_y);
+      renderWindow.draw(pupil_shape);
+      pupil_shape.setPosition(right_eye_reference_x, eye_reference_y);
+      renderWindow.draw(pupil_shape);
+    }
+
 
     // nose
-    switch(noseShape) {
+    if(show_nose) {
 
-      case NO_NOSE:
-      default:
-      break;
+      switch(noseShape) {
 
-      case ANNULUS:
-        nose_annulus.setPosition(nose_reference_x, nose_reference_y);
-        nose_annulus.setScale(nose_scale, nose_scale);
-        nose_annulus.setFillColor(nose_colour);
-        renderWindow.draw(nose_annulus);
+        case ANNULUS:
+          nose_annulus.setPosition(nose_reference_x, nose_reference_y);
+          nose_annulus.setScale(nose_scale, nose_scale);
+          nose_annulus.setFillColor(nose_colour);
+          renderWindow.draw(nose_annulus);
 
-        nose_annulus.setScale(nose_scale*0.7f, nose_scale*0.7f);
-        nose_annulus.setFillColor(background_colour);
-        renderWindow.draw(nose_annulus);
+          nose_annulus.setScale(nose_scale*0.7f, nose_scale*0.7f);
+          nose_annulus.setFillColor(background_colour);
+          renderWindow.draw(nose_annulus);
 
-      break;
+        break;
 
-      case BUTTON:
-        nose_annulus.setPosition(nose_reference_x, nose_reference_y);
-        nose_annulus.setFillColor(nose_colour);
-        nose_annulus.setScale(nose_scale, nose_scale);
-        renderWindow.draw(nose_annulus);
+        case BUTTON:
+        default:
+          nose_annulus.setPosition(nose_reference_x, nose_reference_y);
+          nose_annulus.setFillColor(nose_colour);
+          nose_annulus.setScale(nose_scale, nose_scale);
+          renderWindow.draw(nose_annulus);
 
-      break;
+        break;
 
 
-      case CURVE:
-        {
+        case CURVE:
+          {
+            sf::Transform t;
+            t.translate(0, nose_reference_y);
+
+            //TODO SCALE HERE
+            renderWindow.draw(nose_curve_points, t);
+            renderWindow.draw(left_nose_curve_fillet, t);
+            renderWindow.draw(right_nose_curve_fillet, t);
+          }
+        break;
+
+        case INVERTED_TRIANGLE:
           sf::Transform t;
           t.translate(0, nose_reference_y);
 
           //TODO SCALE HERE
-          renderWindow.draw(nose_curve_points, t);
-          renderWindow.draw(left_nose_curve_fillet, t);
-          renderWindow.draw(right_nose_curve_fillet, t);
-        }
-      break;
+          renderWindow.draw(nose_inverted_triangle_points, t);
+        break;
+      }
 
-      case INVERTED_TRIANGLE:
-        sf::Transform t;
-        t.translate(0, nose_reference_y);
-
-        //TODO SCALE HERE
-        renderWindow.draw(nose_inverted_triangle_points, t);
-      break;
     }
 
 
+    if(show_mouth) {
+      //TODO
+    }
+
+
+    if(show_eybrows) {
+      //TODO
+    }
+    
 
 
     /*
