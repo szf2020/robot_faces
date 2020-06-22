@@ -245,14 +245,11 @@ void dynamic_reconfigure_cb(robot_faces::ParametersConfig &config, uint32_t leve
   nose_annulus.setFillColor(nose_colour);
   left_nose_curve_fillet.setFillColor(nose_colour);
   right_nose_curve_fillet.setFillColor(nose_colour);
-  computeNoseCurvePoints();
-  computeNoseInvertedTrianglePoints();
 
   updateColour(eyebrow_colour, config.eyebrow_colour);
 
   updateColour(iris_colour, config.iris_colour);
   iris_shape.setFillColor(iris_colour);
-  computeIrisPoints();
 
   updateColour(pupil_colour, config.pupil_colour);
   pupil_shape.setFillColor(pupil_colour);
@@ -266,12 +263,15 @@ void dynamic_reconfigure_cb(robot_faces::ParametersConfig &config, uint32_t leve
 
   // scaling
   nose_scaling = config.nose_scaling;
-  computeNoseCurvePoints();
-  computeNoseInvertedTrianglePoints();
   eye_scaling_x = config.eye_scaling_x;
   eye_scaling_y = config.eye_scaling_y;
   eyebrow_scaling = config.eyebrow_scaling;
   mouth_scaling = config.mouth_scaling;
+
+  // recompute vertexarray points
+  computeNoseCurvePoints();
+  computeNoseInvertedTrianglePoints();
+  computeIrisPoints();
 
 }
 
@@ -382,18 +382,19 @@ int main(int argc, char **argv) {
     if(show_iris) {
 
       if(irisShape==THICK || irisShape==OVAL || irisShape==ALMOND || irisShape==ARC) {
-        sf::Transform t;
-        //TODO SCALE
-        t.translate(left_eye_reference_x, eye_reference_y);
+        sf::Transform t(1.f*eye_scaling_x, 0.f, left_eye_reference_x,
+                         0.f,  eye_scaling_y, eye_reference_y,
+                         0.f,  0.f, 1.f);
         renderWindow.draw(iris_points, t);
 
-        t = sf::Transform(-1.f, 0.f, right_eye_reference_x,
-                         0.f,  1.f, eye_reference_y,
+        t = sf::Transform(-1.f*eye_scaling_x, 0.f, right_eye_reference_x,
+                         0.f,  eye_scaling_y, eye_reference_y,
                          0.f,  0.f, 1.f);
 
         renderWindow.draw(iris_points, t);
 
       } else {
+        iris_shape.setScale(eye_scaling_x, eye_scaling_y);
         iris_shape.setPosition(left_eye_reference_x, eye_reference_y);
         renderWindow.draw(iris_shape);
         iris_shape.setPosition(right_eye_reference_x, eye_reference_y);
@@ -442,6 +443,7 @@ int main(int argc, char **argv) {
 
         case CURVE:
           {
+            //TODO CHANGE SCALING TO HERE USING CUSTOM TRANSFORMATION MATRIX
             sf::Transform t;
             t.translate(nose_reference_x, nose_reference_y);
             renderWindow.draw(nose_curve_points, t);
@@ -451,6 +453,7 @@ int main(int argc, char **argv) {
         break;
 
         case INVERTED_TRIANGLE:
+          //TODO CHANGE SCALING TO HERE USING CUSTOM TRANSFORMATION MATRIX
           sf::Transform t;
           t.translate(nose_reference_x, nose_reference_y);
           renderWindow.draw(nose_inverted_triangle_points, t);
