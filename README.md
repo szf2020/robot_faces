@@ -55,6 +55,15 @@ Parameters are organised into groups such as positioning, scaling and behaviour.
 | show_nose      | Whether to render the nose     | False   |
 | show_mouth     | Whether to render the mouth    | True    |
 
+### Scaling parameter group
+
+| Parameter name  | Description             | default | min | max  |
+| --------------- | ----------------------- | ------- | --- | ---- |
+| nose_scaling    | Scaling of the nose     | 1.0     | 0.0 | 10.0 |
+| eye_scaling_x   | X-scaling of the eyes   | 1.0     | 0.0 | 10.0 |
+| eye_scaling_y   | Y-scaling of the eyes   | 1.0     | 0.0 | 10.0 |
+| eyebrow_scaling | Scaling of the eyebrows | 1.0     | 0.0 | 10.0 |
+| mouth_scaling   | Scaling of the mouth    | 1.0     | 0.0 | 10.0 |
 
 
 ## API
@@ -78,6 +87,8 @@ The faces can be interacted with through ROS topics and services.
 * Add light highlights to iris and pupil.
 
 * Make nose a rounded rectangle.
+
+* Add other functions to utility file.
 
 ## Ideas
 

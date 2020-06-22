@@ -1,0 +1,137 @@
+<div class="container">
+  <div id="obj"></div>
+  <svg version="1.1" x="0px" y="0px" width="100px" height="100px" viewBox="0 0 100 00"
+     xml:space="preserve">
+  <path id="path" fill="none" stroke="#000000" stroke-width="2.8243" stroke-miterlimit="10" d="m -43.299148,326.01048 c 14.883203,7.13682 52.0375975,7.23791 67.281699,3.75023 22.293092,-5.10059 28.082211,-41.01146 15.710979,-52.36974 -20.927695,-19.21422 -59.868983,-10.55681 -76.655917,2.86651 -17.246255,13.79064 -19.690441,39.34958 -6.336761,45.753 z"
+    />
+  </svg>
+
+  <br><br>
+
+  <input type="range" name="slider" id="slider" min="0" max="100" width="500">
+  <input type="text" name="slider_val" size="3" id="slider_val">
+  <br><br>
+  <button id="toggle_animation_btn">Toggle Animation</button>
+  <ul id="mylist"></ul>
+</div>
+
+////////////////////////////////////////////////////////////////////////////////
+
+<style>
+body {
+  margin: 5em;
+}
+#obj {
+  background: blue;
+  width: 20px;
+  height: 20px;
+  border-radius: 10px;
+  position: absolute;
+  /* Align center */
+  top:-10px;
+  left: -10px;
+  opacity: 0.5;
+}
+
+ul {
+  list-style: none
+}
+
+.container {
+  width: 438px;
+  margin: 0 auto;
+  position: relative;
+}
+input[type="range"] {
+  width: 400px;
+}
+
+</style>
+
+
+////////////////////////////////////////////////////////////////////////////////
+
+<script>
+// The two important methods here are
+// path.getTotalLength and path.getPointAtLength
+
+// For more info see:
+// https://developer.mozilla.org/en-US/docs/Web/API/SVGPathElement
+
+var list = document.getElementById('mylist')
+var path = document.getElementById('path')
+var obj = document.getElementById('obj');
+// Length of path
+var pathLength = Math.floor( path.getTotalLength() );
+
+// Move obj element along path based on percentage of total length
+function moveObj(prcnt)
+{
+  prcnt = (prcnt*pathLength) / 100;
+
+  // Get x and y values at a certain point in the line
+  pt = path.getPointAtLength(prcnt);
+  //pt.x = Math.round(pt.x);
+  //pt.y = Math.round(pt.y);
+  pt.y = pt.y-300
+
+  obj.style.webkitTransform = 'translate3d('+pt.x+'px,'+pt.y+'px, 0)';
+
+  var li = document.createElement("li");
+  li.appendChild(document.createTextNode(pt.x*1+","+pt.y*1));
+  mylist.appendChild(li);
+}
+
+// Initialize
+moveObj(0);
+
+// Slider functionality
+var sliderEl = document.getElementById('slider');
+var sliderValEl = document.getElementById('slider_val');
+sliderEl.addEventListener('mousemove', function() {
+
+  sliderValEl.value = this.value;
+  moveObj(sliderValEl.value);
+});
+
+// Animation functionality
+// Use request animation frame for better performance
+// if you're doing a lot of animation
+var toggleAnimationBtn = document.getElementById('toggle_animation_btn')
+var animationTimer = false;
+
+function animationHandler(prcnt) {
+  moveObj(prcnt);
+  sliderEl.value = prcnt;
+  sliderValEl.value = prcnt;
+
+
+  if(prcnt < 100)
+  {
+    animationTimer = setTimeout(function() {
+      animationHandler(prcnt+1);
+    },50)
+  }
+  else
+  {
+    /*
+    animationTimer = setTimeout(function() {
+      animationHandler(0);
+    }, 50);
+    */
+  }
+}
+
+toggleAnimationBtn.addEventListener('mouseup', function() {
+  mylist.innerHTML = "";
+  if(animationTimer) {
+    clearTimeout(animationTimer);
+    animationTimer = false;
+  }
+  else
+  {
+    animationTimer = animationHandler(0);
+  }
+});
+
+</script>
