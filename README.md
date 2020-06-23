@@ -16,10 +16,11 @@ Parameters are organised into groups such as positioning, scaling and behaviour.
 
 | Parameter name      | Description                                                       | default | min | max |
 | ------------------- | ----------------------------------------------------------------- | ------- | --- | --- |
-| nose_shape          | Enum describing the nose (annulus, button, curve and dog)         | button  |     |     |
 | pupil_corner_radius | Corner radius of pupil: 0.0 is a straight corner, 1.0 is a circle | 1.0     | 0.0 | 1.0 |
-| iris_shape          | Enum for the iris shape (rounded rect, thick, oval, almond, arc)  | circle  |     |     |
 | iris_corner_radius  | Corner radius of iris: 0.0 is a straight corner, 1.0 is a circle  | 1.0     | 0.0 | 1.0 |
+| eyebrow_shape       | Enum for the eyebrow shape                                        | arc  |     |     |
+| iris_shape          | Enum for the iris shape (rounded rect, thick, oval, almond, arc)  | circle  |     |     |
+| nose_shape          | Enum describing the nose (annulus, button, curve and dog)         | button  |     |     |
 
 
 

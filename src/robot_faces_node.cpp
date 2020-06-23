@@ -81,15 +81,22 @@ int iris_diameter = int(g_window_width/7.0f);
 float iris_corner_radius = 1.0f;
 sf::VertexArray iris_points(sf::TrianglesFan);
 
+// eyebrows
+enum EyebrowShape { CIRCULAR_ARC, RECTANGULAR, SQUARE, ROUNDED, STRAIGHT, HIGH_ARCH } eyebrowShape = CIRCULAR_ARC;
+sf::VertexArray eyebrow_points(sf::TrianglesFan);
+
 // debug markers
 const sf::Color REFERENCE_MARKER_COLOUR(0, 255, 0, 255);
 const int REFERENCE_MARKER_RADIUS = 5;
 sf::CircleShape reference_marker;
 
 
+/*
+//TODO MOVE TO UTILITY FILE
+helper functions
+*/
+
 void computeIrisPoints() {
-
-
 
   std::string filename = "";
   if(irisShape==THICK) {
@@ -138,8 +145,6 @@ void computeIrisPoints() {
 
 }
 
-
-
 void computeNoseInvertedTrianglePoints() {
 
   nose_inverted_triangle_points.clear();
@@ -172,7 +177,6 @@ void computeNoseInvertedTrianglePoints() {
   file.close();
 
 }
-
 
 void computeNoseCurvePoints() {
 
@@ -211,8 +215,76 @@ void computeNoseCurvePoints() {
   	right_nose_curve_fillet.setPosition(initial_position.x+radius*sin(degToRad(30)), initial_position.y+radius*cos(degToRad(30)));
 }
 
+void computeEyebrowPoints() {
+
+  std::string filename = "eyebrow_arc";
+
+  switch (eyebrowShape) {
+    case CIRCULAR_ARC:
+    default:
+      filename="eyebrow_arc";
+    break;
+
+    case RECTANGULAR:
+      filename="eyebrow_rectangular";
+    break;
+
+    case SQUARE:
+      filename="eyebrow_square";
+    break;
+
+    case ROUNDED:
+      filename="eyebrow_rounded";
+    break;
+
+    case STRAIGHT:
+      filename="eyebrow_straight";
+    break;
+
+    case HIGH_ARCH:
+      filename="eyebrow_high_arch";
+    break;
+
+  }
 
 
+  eyebrow_points.clear();
+  sf::Vector2f initial_position{0, 0}; //TODO REMOVE
+  std::string package_path = ros::package::getPath("robot_faces");
+
+  std::ifstream file(package_path+"/res/"+filename+".txt", std::ifstream::in);
+
+  std::string line, x, y;
+  if(!getline(file, line)) {
+    ROS_ERROR("Could not open file");
+  }
+  std::stringstream liness(line);
+
+  eyebrow_points.append(sf::Vertex(sf::Vector2f(initial_position.x, initial_position.y), eyebrow_colour));
+
+  while (getline(file, line)) {
+      std::stringstream liness(line);
+      getline(liness, x, ',');
+      getline(liness, y);
+
+
+      float x_point = strtof(x.c_str(),0);
+      float y_point = strtof(y.c_str(),0);
+
+
+      x_point = (float) initial_position.x + eyebrow_scaling*x_point;
+      y_point = (float) initial_position.y + eyebrow_scaling*y_point;
+      eyebrow_points.append(sf::Vertex(sf::Vector2f(x_point, y_point), eyebrow_colour));
+  }
+  file.close();
+
+}
+
+
+
+/*
+callback functions
+*/
 void dynamic_reconfigure_cb(robot_faces::ParametersConfig &config, uint32_t level) {
 
 
@@ -224,6 +296,8 @@ void dynamic_reconfigure_cb(robot_faces::ParametersConfig &config, uint32_t leve
   irisShape = static_cast<IrisShape>(config.iris_shape);
 
   noseShape = static_cast<NoseShape>(config.nose_shape);
+
+  eyebrowShape = static_cast<EyebrowShape>(config.eyebrow_shape);
 
   pupil_corner_radius = config.pupil_corner_radius;
   pupil_shape.setCornersRadius(pupil_corner_radius*pupil_radius/2.0f);
@@ -272,7 +346,7 @@ void dynamic_reconfigure_cb(robot_faces::ParametersConfig &config, uint32_t leve
   computeNoseCurvePoints();
   computeNoseInvertedTrianglePoints();
   computeIrisPoints();
-
+  computeEyebrowPoints();
 }
 
 
@@ -323,7 +397,7 @@ int main(int argc, char **argv) {
   pupil_shape.setCornerPointCount(20);
   pupil_shape.setFillColor(pupil_colour);
 
-  //iris
+  // iris
   iris_shape.setSize(sf::Vector2f(iris_diameter, iris_diameter));
   iris_shape.setOrigin(iris_diameter/2.0f, iris_diameter/2.0f);
   iris_shape.setCornersRadius(iris_corner_radius*iris_diameter/2.0f);
@@ -332,15 +406,16 @@ int main(int argc, char **argv) {
 
   computeIrisPoints();
 
+  // eyebrows
+
+  computeEyebrowPoints();
+
 
 
   // reference markers
   reference_marker.setRadius(REFERENCE_MARKER_RADIUS);
   reference_marker.setOrigin(REFERENCE_MARKER_RADIUS, REFERENCE_MARKER_RADIUS);
   reference_marker.setFillColor(REFERENCE_MARKER_COLOUR);
-
-
-
 
 
 
@@ -469,7 +544,21 @@ int main(int argc, char **argv) {
 
 
     if(show_eybrows) {
-      //TODO
+      // offset for concave shapes
+      float offset_x=0.0f; //90.0f for eyebrow_two
+      if(eyebrowShape==RECTANGULAR) {
+        offset_x=90.0f;
+      }
+      sf::Transform t(1.f, 0.f, left_eye_reference_x+offset_x,
+                       0.f,  1.0f, eyebrow_reference_y,
+                       0.f,  0.f, 1.f);
+      renderWindow.draw(eyebrow_points, t);
+
+      t = sf::Transform(-1.f, 0.f, right_eye_reference_x-offset_x,
+                       0.f,  1.0f, eyebrow_reference_y,
+                       0.f,  0.f, 1.f);
+
+      renderWindow.draw(eyebrow_points, t);
     }
 
 
