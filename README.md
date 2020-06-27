@@ -92,6 +92,9 @@ The faces can be interacted with through ROS topics and services.
 
 * Mouth: scaling in x and y, closed or open mouth.
 
+* Fix nose curve bug.
+
+
 ## Ideas
 
 * Include face parameter presets.

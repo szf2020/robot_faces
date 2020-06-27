@@ -23,11 +23,13 @@ inline sf::Vector2f getNormal(const sf::Vector2f v) {
 	return sf::Vector2f(-v.y, v.y);
 }
 
-inline sf::Vector2f normalized(const sf::Vector2f v) {
-	return v / getMagnitude(v);
+inline sf::Vector2f normalize(const sf::Vector2f v) {
+	float mag = getMagnitude(v);
+	return mag !=0 ? v / mag : sf::Vector2f(0,0);
 }
 
-inline float degToRad(const float deg) {
+template <class T>
+inline T degToRad(const T deg) {
   return deg * M_PI / 180.0f;
 }
 
@@ -37,7 +39,7 @@ sf::VertexArray generateLineWThickness(const std::vector<sf::Vector2f>& points, 
 
   for (int i=0; i < points.size()-1; i++) {
     sf::Vector2f line = points[i] - points[i+1];
-    sf::Vector2f normal = normalized(sf::Vector2f(-line.y, line.x));
+    sf::Vector2f normal = normalize(sf::Vector2f(-line.y, line.x));
 
 		array.append(sf::Vertex(points[i] - thickness * normal, color));
 		array.append(sf::Vertex(points[i] + thickness * normal, color));

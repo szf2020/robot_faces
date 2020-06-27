@@ -1,7 +1,7 @@
 
 #include <fstream>
 #include <string>
-#include <iostream> // debug
+#include <iostream>
 #include <random>
 
 #include <ros/ros.h>
@@ -75,6 +75,7 @@ sf::VertexArray nose_inverted_triangle_points(sf::TrianglesFan);
 sf::RoundedRectangle pupil_shape;
 int pupil_radius = int(g_window_width/15.0f);
 float pupil_corner_radius = 1.0f;
+sf::Vector2f goal_pupil_pos, curr_pupil_pos; // relative to the reference point in px
 
 // iris
 enum struct IrisShape { ROUNDED_RECTANGLE, THICK, OVAL, ALMOND, ARC } irisShape = IrisShape::ROUNDED_RECTANGLE;
@@ -82,6 +83,7 @@ sf::RoundedRectangle iris_shape;
 int iris_diameter = int(g_window_width/7.0f);
 float iris_corner_radius = 1.0f;
 sf::VertexArray iris_points(sf::TrianglesFan);
+sf::Vector2f curr_iris_pos; // relative to the reference point in px, no need for a goal. The iris just trails the pupil goal position
 
 // eyebrows
 enum struct EyebrowShape { CIRCULAR_ARC, RECTANGULAR, SQUARE, ROUNDED, STRAIGHT, HIGH_ARCH } eyebrowShape = EyebrowShape::CIRCULAR_ARC;
@@ -152,6 +154,24 @@ bool BezierPoints::withinDelta(const BezierPoints &other_point) const {
 const sf::Color REFERENCE_MARKER_COLOUR(0, 255, 0, 255);
 const int REFERENCE_MARKER_RADIUS = 5;
 sf::CircleShape reference_marker;
+
+
+/*
+
+behaviour
+
+*/
+
+const float SACCADE_SPEED = 90.0f; // px per second
+
+sf::Clock frame_clock; // gets time from one frame to the next
+
+std::mt19937 eng;
+sf::Clock saccade_clock; // measures time between saccades
+
+int saccade_interval;
+std::uniform_int_distribution<int> saccade_time_dist(1000, 5000); // milliseconds between saccades
+std::uniform_int_distribution<int> saccade_pos_dist(-60, 60); // position to move for a saccade in px TODO HOW TO INIT MAX
 
 
 
@@ -261,7 +281,7 @@ void generateNoseCurvePoints() {
     curr_vector = sf::Vector2f(initial_position.x+radius*sin(degToRad(ang)), initial_position.y+radius*cos(degToRad(ang)));
 
     sf::Vector2f line = prev_vector - curr_vector;
-    sf::Vector2f normal = normalized(sf::Vector2f(-line.y, line.x));
+    sf::Vector2f normal = normalize(sf::Vector2f(-line.y, line.x));
 
     nose_curve_points.append(sf::Vertex(prev_vector - thickness * normal, nose_colour));
     nose_curve_points.append(sf::Vertex(prev_vector + thickness * normal, nose_colour));
@@ -453,6 +473,10 @@ int main(int argc, char **argv) {
   server.setCallback(f);
 
 
+	std::random_device rd;
+	eng.seed(rd());
+
+	saccade_interval = saccade_time_dist(eng);
 
   sf::RenderWindow renderWindow(sf::VideoMode(g_window_width, g_window_height), "robot_face");
 
@@ -464,7 +488,7 @@ int main(int argc, char **argv) {
 
 
   /*
-  sf elements
+  init
   */
 
   // nose
@@ -484,6 +508,10 @@ int main(int argc, char **argv) {
   pupil_shape.setCornerPointCount(20);
   pupil_shape.setFillColor(pupil_colour);
 
+
+  goal_pupil_pos = sf::Vector2f(0, 0);
+  curr_pupil_pos = goal_pupil_pos;
+
   // iris
   iris_shape.setSize(sf::Vector2f(iris_diameter, iris_diameter));
   iris_shape.setOrigin(iris_diameter/2.0f, iris_diameter/2.0f);
@@ -491,6 +519,8 @@ int main(int argc, char **argv) {
   iris_shape.setCornerPointCount(20);
   iris_shape.setFillColor(iris_colour);
   generateIrisPoints();
+
+  curr_iris_pos = goal_pupil_pos;
 
   // eyebrows
   generateEyebrowPoints();
@@ -535,6 +565,28 @@ int main(int argc, char **argv) {
     }
 
 
+
+    float frame_delta_time = frame_clock.getElapsedTime().asMilliseconds()/1000.0f; // time since last frame draw
+    frame_clock.restart();
+
+
+    if(saccade_clock.getElapsedTime().asMilliseconds() > saccade_interval) {
+
+      if(PRINT_DEBUG_MESSAGES) {
+        ROS_INFO("Perform saccade");
+      }
+
+      int delta_x = saccade_pos_dist(eng);
+      int delta_y = saccade_pos_dist(eng);
+
+      goal_pupil_pos = sf::Vector2f(delta_x, delta_y);
+
+
+      saccade_interval = saccade_time_dist(eng);
+      saccade_clock.restart();
+    }
+
+
     // calculate reference points for positioning
     int left_eye_reference_x = int(0.5f*(g_window_width-eye_spacing*g_window_width));
     int right_eye_reference_x = int(g_window_width-0.5f*(g_window_width-eye_spacing*g_window_width));
@@ -548,8 +600,15 @@ int main(int argc, char **argv) {
     int mouth_reference_x = int(0.5f*g_window_width);
     int mouth_reference_y = int(mouth_height*g_window_height);
 
+    // interpolate between curr and goal positions
+    sf::Vector2f pupil_direction = normalize(goal_pupil_pos - curr_pupil_pos);
+    curr_pupil_pos += frame_delta_time*SACCADE_SPEED*pupil_direction;
 
-    // colours
+    curr_iris_pos += frame_delta_time*SACCADE_SPEED*pupil_direction*0.6f;
+
+
+
+
     renderWindow.clear(background_colour);
 
 
@@ -561,22 +620,22 @@ int main(int argc, char **argv) {
     if(show_iris) {
 
       if(irisShape==IrisShape::THICK || irisShape==IrisShape::OVAL || irisShape==IrisShape::ALMOND || irisShape==IrisShape::ARC) {
-        sf::Transform t(1.f*eye_scaling_x, 0.f, left_eye_reference_x,
-                         0.f,  eye_scaling_y, eye_reference_y,
+        sf::Transform t(1.f*eye_scaling_x, 0.f, left_eye_reference_x+curr_iris_pos.x,
+                         0.f,  eye_scaling_y, eye_reference_y+curr_iris_pos.y,
                          0.f,  0.f, 1.f);
         renderWindow.draw(iris_points, t);
 
-        t = sf::Transform(-1.f*eye_scaling_x, 0.f, right_eye_reference_x,
-                         0.f,  eye_scaling_y, eye_reference_y,
+        t = sf::Transform(-1.f*eye_scaling_x, 0.f, right_eye_reference_x+curr_iris_pos.x,
+                         0.f,  eye_scaling_y, eye_reference_y+curr_iris_pos.y,
                          0.f,  0.f, 1.f);
 
         renderWindow.draw(iris_points, t);
 
       } else {
         iris_shape.setScale(eye_scaling_x, eye_scaling_y);
-        iris_shape.setPosition(left_eye_reference_x, eye_reference_y);
+        iris_shape.setPosition(left_eye_reference_x+curr_iris_pos.x, eye_reference_y+curr_iris_pos.y);
         renderWindow.draw(iris_shape);
-        iris_shape.setPosition(right_eye_reference_x, eye_reference_y);
+        iris_shape.setPosition(right_eye_reference_x+curr_iris_pos.x, eye_reference_y+curr_iris_pos.y);
         renderWindow.draw(iris_shape);
       }
 
@@ -586,9 +645,9 @@ int main(int argc, char **argv) {
     // pupils
     if(show_pupil) {
 
-      pupil_shape.setPosition(left_eye_reference_x, eye_reference_y);
+      pupil_shape.setPosition(left_eye_reference_x+curr_pupil_pos.x, eye_reference_y+curr_pupil_pos.y);
       renderWindow.draw(pupil_shape);
-      pupil_shape.setPosition(right_eye_reference_x, eye_reference_y);
+      pupil_shape.setPosition(right_eye_reference_x+curr_pupil_pos.x, eye_reference_y+curr_pupil_pos.y);
       renderWindow.draw(pupil_shape);
     }
 
