@@ -2,6 +2,7 @@
 
 robot_faces is a ROS package for rendering animated robot faces. Almost everything is parametised and can be changed through dynamic_recofigure to produce a variety of faces. All faces support several emotional expressions and actions such as speaking and blinking.
 
+
 ## Dependencies
 
 We use SFML to render animations. It does not come with a FindSFML.cmake so I added one in the cmake/ directory.
@@ -18,7 +19,7 @@ Parameters are organised into groups such as positioning, scaling and behaviour.
 | ------------------- | ----------------------------------------------------------------- | ------- | --- | --- |
 | pupil_corner_radius | Corner radius of pupil: 0.0 is a straight corner, 1.0 is a circle | 1.0     | 0.0 | 1.0 |
 | iris_corner_radius  | Corner radius of iris: 0.0 is a straight corner, 1.0 is a circle  | 1.0     | 0.0 | 1.0 |
-| eyebrow_shape       | Enum for the eyebrow shape                                        | arc  |     |     |
+| eyebrow_shape       | Enum for the eyebrow shape                                        | arc     |     |     |
 | iris_shape          | Enum for the iris shape (rounded rect, thick, oval, almond, arc)  | circle  |     |     |
 | nose_shape          | Enum describing the nose (annulus, button, curve and dog)         | button  |     |     |
 
@@ -44,6 +45,7 @@ Parameters are organised into groups such as positioning, scaling and behaviour.
 | pupil_colour      | Comma delimited RGBA string of the pupil      | "0,0,0,255"       |
 | iris_colour       | Comma delimited RGBA string of the iris       | "139,69,19,255"   |
 | eyebrow_colour    | Comma delimited RGBA string of the eyebrow    | "34,27,7,255"     |
+| mouth_colour      | Comma delimited RGBA string of the mouth      | "0,0,0,255"     |
 
 
 #### Display toggles parameter group
@@ -64,7 +66,8 @@ Parameters are organised into groups such as positioning, scaling and behaviour.
 | eye_scaling_x   | X-scaling of the eyes   | 1.0     | 0.0 | 10.0 |
 | eye_scaling_y   | Y-scaling of the eyes   | 1.0     | 0.0 | 10.0 |
 | eyebrow_scaling | Scaling of the eyebrows | 1.0     | 0.0 | 10.0 |
-| mouth_scaling   | Scaling of the mouth    | 1.0     | 0.0 | 10.0 |
+| mouth_scaling_x | X-scaling of the mouth  | 1.0     | 0.0 | 10.0 |
+| mouth_scaling_y | Y-scaling of the mouth  | 1.0     | 0.0 | 10.0 |
 
 
 ## API
@@ -77,19 +80,17 @@ The faces can be interacted with through ROS topics and services.
 
 * Anti-aliasing setting.
 
-* Add image of possible faces to README.
+* Add image of possible faces and explain bezier points to README.
 
 * Add tests for regex validation of colour parameters.
 
-* Add light highlight to nose.
-
-* Scaling parameters.
-
-* Add light highlights to iris and pupil.
+* Add light highlight to nose, iris and pupil.
 
 * Make nose a rounded rectangle.
 
 * Add other functions to utility file.
+
+* Mouth: scaling in x and y, closed or open mouth.
 
 ## Ideas
 

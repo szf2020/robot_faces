@@ -40,6 +40,7 @@ sf::Color nose_colour(41,41,41,255);
 sf::Color pupil_colour(0,0,0,255);
 sf::Color iris_colour(139,69,19,255);
 sf::Color eyebrow_colour(34,27,7,255);
+sf::Color mouth_colour(0,0,0,255);
 
 // display toggles
 bool show_eybrows = true;
@@ -53,7 +54,8 @@ float nose_scaling = 1.0f;
 float eye_scaling_x = 1.0f;
 float eye_scaling_y = 1.0f;
 float eyebrow_scaling = 1.0f;
-float mouth_scaling = 1.0f;
+float mouth_scaling_x = 1.0f;
+float mouth_scaling_y = 1.0f;
 
 /*
 sf elements
@@ -75,15 +77,76 @@ int pupil_radius = int(g_window_width/15.0f);
 float pupil_corner_radius = 1.0f;
 
 // iris
-enum IrisShape { ROUNDED_RECTANGLE, THICK, OVAL, ALMOND, ARC } irisShape = ROUNDED_RECTANGLE;
+enum struct IrisShape { ROUNDED_RECTANGLE, THICK, OVAL, ALMOND, ARC } irisShape = IrisShape::ROUNDED_RECTANGLE;
 sf::RoundedRectangle iris_shape;
 int iris_diameter = int(g_window_width/7.0f);
 float iris_corner_radius = 1.0f;
 sf::VertexArray iris_points(sf::TrianglesFan);
 
 // eyebrows
-enum EyebrowShape { CIRCULAR_ARC, RECTANGULAR, SQUARE, ROUNDED, STRAIGHT, HIGH_ARCH } eyebrowShape = CIRCULAR_ARC;
+enum struct EyebrowShape { CIRCULAR_ARC, RECTANGULAR, SQUARE, ROUNDED, STRAIGHT, HIGH_ARCH } eyebrowShape = EyebrowShape::CIRCULAR_ARC;
 sf::VertexArray eyebrow_points(sf::TrianglesFan);
+
+
+// mouth
+const int MOUTH_THICKNESS = 8.0f; //note this is actually half the thickness, make a parameter
+std::vector<sf::Vector2f> upper_mouth_vertices, lower_mouth_vertices;
+sf::CircleShape mouth_fillet;
+
+struct BezierPoints {
+    sf::Vector2f upper_start, upper_end, upper_start_control, upper_end_control;
+    sf::Vector2f lower_start, lower_end, lower_start_control, lower_end_control;
+
+    bool operator==(const BezierPoints &) const;
+    bool withinDelta(const BezierPoints &) const;
+};
+
+//TODO CHANGE THESE LATER
+float center_x = (float) g_window_width/2.0f;
+float quarter_x = (float) g_window_width/4.0f;
+float eight_x = (float) g_window_width/8.0f;
+float center_y = (float) g_window_height/2.0f;
+float quarter_y = (float) g_window_height/4.0f;
+float eight_y = (float) g_window_height/8.0f;
+
+BezierPoints curr_mouth_points;
+
+const float CLOSE_ENOUGH_THRESHOLD = 1.0f; // in px
+
+//bezier points enum member functions
+bool BezierPoints::operator== (const BezierPoints &other_point) const {
+    if(upper_start == other_point.upper_start &&
+        upper_end == other_point.upper_end &&
+        upper_start_control == other_point.upper_start_control &&
+        upper_end_control == other_point.upper_end_control &&
+
+        lower_start == other_point.lower_start &&
+        lower_end == other_point.lower_end &&
+        lower_start_control == other_point.lower_start_control &&
+        lower_end_control == other_point.lower_end_control) {
+
+        return true;
+    } else {
+        return false;
+    }
+}
+
+bool BezierPoints::withinDelta(const BezierPoints &other_point) const {
+
+    if(getDistance(upper_start, other_point.upper_start) < CLOSE_ENOUGH_THRESHOLD &&
+        getDistance(upper_end, other_point.upper_end) < CLOSE_ENOUGH_THRESHOLD &&
+        getDistance(upper_start_control, other_point.upper_start_control) < CLOSE_ENOUGH_THRESHOLD &&
+        getDistance(upper_end_control, other_point.upper_end_control) < CLOSE_ENOUGH_THRESHOLD &&
+
+        getDistance(lower_start, other_point.lower_start) < CLOSE_ENOUGH_THRESHOLD &&
+        getDistance(lower_end, other_point.lower_end) < CLOSE_ENOUGH_THRESHOLD &&
+        getDistance(lower_start_control, other_point.lower_start_control) < CLOSE_ENOUGH_THRESHOLD &&
+        getDistance(lower_end_control, other_point.lower_end_control) < CLOSE_ENOUGH_THRESHOLD) {
+        return true;
+    } else {
+        return false;
+    }
+}
 
 // debug markers
 const sf::Color REFERENCE_MARKER_COLOUR(0, 255, 0, 255);
@@ -91,21 +154,24 @@ const int REFERENCE_MARKER_RADIUS = 5;
 sf::CircleShape reference_marker;
 
 
+
+
 /*
-//TODO MOVE TO UTILITY FILE
 helper functions
+//TODO MOVE THESE UTILITY FILE
+//TODO REFACTOR TO USE generateLineWThickness FUNCTION
 */
 
-void computeIrisPoints() {
+void generateIrisPoints() {
 
   std::string filename = "";
-  if(irisShape==THICK) {
+  if(irisShape==IrisShape::THICK) {
     filename="iris_thick";
-  } else if(irisShape==OVAL) {
+  } else if(irisShape==IrisShape::OVAL) {
     filename="iris_oval";
-  } else if(irisShape==ALMOND) {
+  } else if(irisShape==IrisShape::ALMOND) {
     filename="iris_almond";
-  } else if(irisShape==ARC) {
+  } else if(irisShape==IrisShape::ARC) {
     filename="iris_arc";
   } else {
     return;
@@ -145,7 +211,7 @@ void computeIrisPoints() {
 
 }
 
-void computeNoseInvertedTrianglePoints() {
+void generateNoseInvertedTrianglePoints() {
 
   nose_inverted_triangle_points.clear();
 
@@ -178,7 +244,7 @@ void computeNoseInvertedTrianglePoints() {
 
 }
 
-void computeNoseCurvePoints() {
+void generateNoseCurvePoints() {
 
   nose_curve_points.clear();
 
@@ -215,33 +281,33 @@ void computeNoseCurvePoints() {
   	right_nose_curve_fillet.setPosition(initial_position.x+radius*sin(degToRad(30)), initial_position.y+radius*cos(degToRad(30)));
 }
 
-void computeEyebrowPoints() {
+void generateEyebrowPoints() {
 
   std::string filename = "eyebrow_arc";
 
   switch (eyebrowShape) {
-    case CIRCULAR_ARC:
+    case EyebrowShape::CIRCULAR_ARC:
     default:
       filename="eyebrow_arc";
     break;
 
-    case RECTANGULAR:
+    case EyebrowShape::RECTANGULAR:
       filename="eyebrow_rectangular";
     break;
 
-    case SQUARE:
+    case EyebrowShape::SQUARE:
       filename="eyebrow_square";
     break;
 
-    case ROUNDED:
+    case EyebrowShape::ROUNDED:
       filename="eyebrow_rounded";
     break;
 
-    case STRAIGHT:
+    case EyebrowShape::STRAIGHT:
       filename="eyebrow_straight";
     break;
 
-    case HIGH_ARCH:
+    case EyebrowShape::HIGH_ARCH:
       filename="eyebrow_high_arch";
     break;
 
@@ -285,7 +351,7 @@ void computeEyebrowPoints() {
 /*
 callback functions
 */
-void dynamic_reconfigure_cb(robot_faces::ParametersConfig &config, uint32_t level) {
+void dynamicReconfigureCb(robot_faces::ParametersConfig &config, uint32_t level) {
 
 
   if(PRINT_DEBUG_MESSAGES) {
@@ -305,12 +371,28 @@ void dynamic_reconfigure_cb(robot_faces::ParametersConfig &config, uint32_t leve
   iris_corner_radius = config.iris_corner_radius;
   iris_shape.setCornersRadius(iris_corner_radius*iris_diameter/2.0f);
 
+
   // positioning
   eye_spacing = config.eye_spacing;
   eye_height = config.eye_height;
   eyebrow_spacing = config.eyebrow_spacing;
   nose_height = config.nose_height;
   mouth_height = config.mouth_height;
+
+  //NOTE REMOVE TEMPORARY DECLARATION
+  int mouth_reference_x = int(0.5f*g_window_width);
+  int mouth_reference_y = int(mouth_height*g_window_height);
+  curr_mouth_points = {
+     .upper_start = sf::Vector2f(mouth_reference_x-quarter_x, mouth_reference_y-10.0f),
+     .upper_end = sf::Vector2f(mouth_reference_x+quarter_x, mouth_reference_y-10.0f),
+     .upper_start_control = sf::Vector2f(mouth_reference_x-eight_x, mouth_reference_y-30.0f),
+     .upper_end_control = sf::Vector2f(mouth_reference_x+eight_x, mouth_reference_y-30.0f),
+
+     .lower_start = sf::Vector2f(mouth_reference_x-quarter_x, mouth_reference_y-10.0f),
+     .lower_end = sf::Vector2f(mouth_reference_x+quarter_x, mouth_reference_y-10.0f),
+     .lower_start_control = sf::Vector2f(mouth_reference_x-eight_x-20.0f, mouth_reference_y+quarter_y),
+     .lower_end_control = sf::Vector2f(mouth_reference_x+eight_x+20.0f, mouth_reference_y+quarter_y)
+ };
 
   // colours
   updateColour(background_colour, config.background_colour);
@@ -328,6 +410,9 @@ void dynamic_reconfigure_cb(robot_faces::ParametersConfig &config, uint32_t leve
   updateColour(pupil_colour, config.pupil_colour);
   pupil_shape.setFillColor(pupil_colour);
 
+  updateColour(mouth_colour, config.mouth_colour);
+  mouth_fillet.setFillColor(mouth_colour);
+
   // display toggles
   show_eybrows = config.show_eybrows;
   show_iris = config.show_iris;
@@ -340,14 +425,17 @@ void dynamic_reconfigure_cb(robot_faces::ParametersConfig &config, uint32_t leve
   eye_scaling_x = config.eye_scaling_x;
   eye_scaling_y = config.eye_scaling_y;
   eyebrow_scaling = config.eyebrow_scaling;
-  mouth_scaling = config.mouth_scaling;
+  mouth_scaling_x = config.mouth_scaling_x;
+  mouth_scaling_y = config.mouth_scaling_y;
 
   // recompute vertexarray points
-  computeNoseCurvePoints();
-  computeNoseInvertedTrianglePoints();
-  computeIrisPoints();
-  computeEyebrowPoints();
+  generateNoseCurvePoints();
+  generateNoseInvertedTrianglePoints();
+  generateIrisPoints();
+  generateEyebrowPoints();
 }
+
+
 
 
 /*
@@ -361,7 +449,7 @@ int main(int argc, char **argv) {
   dynamic_reconfigure::Server<robot_faces::ParametersConfig> server;
   dynamic_reconfigure::Server<robot_faces::ParametersConfig>::CallbackType f;
 
-  f = boost::bind(&dynamic_reconfigure_cb, _1, _2);
+  f = boost::bind(&dynamicReconfigureCb, _1, _2);
   server.setCallback(f);
 
 
@@ -385,10 +473,9 @@ int main(int argc, char **argv) {
 
   sf::Vector2f initial_position{int(0.5f*g_window_width), 0};
 
+  generateNoseCurvePoints();
 
-  computeNoseCurvePoints();
-
-  computeNoseInvertedTrianglePoints();
+  generateNoseInvertedTrianglePoints();
 
   // pupil
   pupil_shape.setSize(sf::Vector2f(pupil_radius, pupil_radius));
@@ -403,14 +490,31 @@ int main(int argc, char **argv) {
   iris_shape.setCornersRadius(iris_corner_radius*iris_diameter/2.0f);
   iris_shape.setCornerPointCount(20);
   iris_shape.setFillColor(iris_colour);
-
-  computeIrisPoints();
+  generateIrisPoints();
 
   // eyebrows
+  generateEyebrowPoints();
 
-  computeEyebrowPoints();
+  // mouth
+  mouth_fillet.setRadius(MOUTH_THICKNESS);
+  mouth_fillet.setFillColor(mouth_colour);
+  mouth_fillet.setOrigin(MOUTH_THICKNESS, MOUTH_THICKNESS);
 
 
+  //NOTE REMOVE TEMPORARY DECLARATION
+  int mouth_reference_x = int(0.5f*g_window_width);
+  int mouth_reference_y = int(mouth_height*g_window_height);
+  curr_mouth_points = {
+     .upper_start = sf::Vector2f(mouth_reference_x-quarter_x, mouth_reference_y-10.0f),
+     .upper_end = sf::Vector2f(mouth_reference_x+quarter_x, mouth_reference_y-10.0f),
+     .upper_start_control = sf::Vector2f(mouth_reference_x-eight_x, mouth_reference_y-30.0f),
+     .upper_end_control = sf::Vector2f(mouth_reference_x+eight_x, mouth_reference_y-30.0f),
+
+     .lower_start = sf::Vector2f(mouth_reference_x-quarter_x, mouth_reference_y-10.0f),
+     .lower_end = sf::Vector2f(mouth_reference_x+quarter_x, mouth_reference_y-10.0f),
+     .lower_start_control = sf::Vector2f(mouth_reference_x-eight_x-20.0f, mouth_reference_y+quarter_y),
+     .lower_end_control = sf::Vector2f(mouth_reference_x+eight_x+20.0f, mouth_reference_y+quarter_y)
+ };
 
   // reference markers
   reference_marker.setRadius(REFERENCE_MARKER_RADIUS);
@@ -456,7 +560,7 @@ int main(int argc, char **argv) {
     // iris
     if(show_iris) {
 
-      if(irisShape==THICK || irisShape==OVAL || irisShape==ALMOND || irisShape==ARC) {
+      if(irisShape==IrisShape::THICK || irisShape==IrisShape::OVAL || irisShape==IrisShape::ALMOND || irisShape==IrisShape::ARC) {
         sf::Transform t(1.f*eye_scaling_x, 0.f, left_eye_reference_x,
                          0.f,  eye_scaling_y, eye_reference_y,
                          0.f,  0.f, 1.f);
@@ -539,14 +643,28 @@ int main(int argc, char **argv) {
 
 
     if(show_mouth) {
-      //TODO
+
+      //NOTE THIS IS DONE EVERY FRAME, SHOULD FIND A WAY TO OPTIMISE
+      upper_mouth_vertices = computeBezierCurve(curr_mouth_points.upper_start, curr_mouth_points.upper_end,
+          curr_mouth_points.upper_start_control, curr_mouth_points.upper_end_control);
+
+      lower_mouth_vertices = computeBezierCurve(curr_mouth_points.lower_start, curr_mouth_points.lower_end,
+          curr_mouth_points.lower_start_control, curr_mouth_points.lower_end_control);
+
+
+      renderWindow.draw(generateLineWThickness(upper_mouth_vertices, mouth_colour, MOUTH_THICKNESS));
+      renderWindow.draw(generateLineWThickness(lower_mouth_vertices, mouth_colour, MOUTH_THICKNESS));
+      mouth_fillet.setPosition(upper_mouth_vertices.front().x, upper_mouth_vertices.front().y);
+      renderWindow.draw(mouth_fillet);
+      mouth_fillet.setPosition(upper_mouth_vertices.back().x, upper_mouth_vertices.back().y);
+      renderWindow.draw(mouth_fillet);
     }
 
 
     if(show_eybrows) {
       // offset for concave shapes
       float offset_x=0.0f; //90.0f for eyebrow_two
-      if(eyebrowShape==RECTANGULAR) {
+      if(eyebrowShape==EyebrowShape::RECTANGULAR) {
         offset_x=90.0f;
       }
       sf::Transform t(1.f, 0.f, left_eye_reference_x+offset_x,
