@@ -16,7 +16,10 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #include <ros/ros.h>
 #include <ros/package.h>
 #include <dynamic_reconfigure/server.h>
+
 #include <robot_faces/ParametersConfig.h>
+#include <robot_faces/Expression.h>
+#include <robot_faces/Gaze.h>
 
 #include <SFML/Graphics.hpp>
 
@@ -523,6 +526,24 @@ void dynamicReconfigureCb(robot_faces::ParametersConfig &config, uint32_t level)
 
 
 
+bool setExpressionCb(robot_faces::Expression::Request &req, robot_faces::Expression::Response &res) {
+
+  if(PRINT_DEBUG_MESSAGES) {
+    ROS_INFO("Change Expression Request");
+  }
+
+  return true;
+}
+
+bool setGazeCb(robot_faces::Gaze::Request &req, robot_faces::Gaze::Response &res) {
+
+  if(PRINT_DEBUG_MESSAGES) {
+    ROS_INFO("Change Gaze Request");
+  }
+
+  return true;
+}
+
 
 /*
 main
@@ -531,12 +552,17 @@ int main(int argc, char **argv) {
 
   ros::init(argc, argv, "robot_face");
 
+  ros::NodeHandle node_handle;
 
   dynamic_reconfigure::Server<robot_faces::ParametersConfig> server;
   dynamic_reconfigure::Server<robot_faces::ParametersConfig>::CallbackType f;
 
   f = boost::bind(&dynamicReconfigureCb, _1, _2);
   server.setCallback(f);
+
+  ros::ServiceServer expression_server = node_handle.advertiseService("expression", setExpressionCb);
+  ros::ServiceServer gaze_server = node_handle.advertiseService("gaze", setGazeCb);
+
 
 
 	std::random_device rd;

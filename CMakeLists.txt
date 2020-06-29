@@ -9,6 +9,7 @@ find_package(catkin REQUIRED COMPONENTS
   roslib
   rospy
   std_msgs
+  message_generation
 )
 
 set(CMAKE_MODULE_PATH
@@ -56,11 +57,11 @@ find_package(SFML REQUIRED)
 # )
 
 ## Generate services in the 'srv' folder
-# add_service_files(
-#   FILES
-#   Service1.srv
-#   Service2.srv
-# )
+add_service_files(
+  FILES
+  Expression.srv
+  Gaze.srv
+)
 
 ## Generate actions in the 'action' folder
 # add_action_files(
@@ -70,10 +71,10 @@ find_package(SFML REQUIRED)
 # )
 
 ## Generate added messages and services with any dependencies listed here
-# generate_messages(
-#   DEPENDENCIES
-#   std_msgs
-# )
+generate_messages(
+  DEPENDENCIES
+  std_msgs
+)
 
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
@@ -106,7 +107,7 @@ generate_dynamic_reconfigure_options(
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES robot_faces
-#  CATKIN_DEPENDS dynamic_reconfigure roscpp roslib rospy std_msgs
+ CATKIN_DEPENDS dynamic_reconfigure roscpp roslib rospy std_msgs message_runtime
 #  DEPENDS system_lib
 )
 

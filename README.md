@@ -75,7 +75,11 @@ Parameters are organised into groups such as positioning, scaling and behaviour.
 
 ## API
 
-The faces can be interacted with through ROS topics and services.
+The face can be interacted with through ROS services.
+
+* Expression
+
+* Gaze
 
 ## TODO
 
@@ -111,7 +115,9 @@ The faces can be interacted with through ROS topics and services.
 
 * Nonlinear easing and interpolation.
 
-* Different eyelid shapes
+* Different eyelid shapes.
+
+* Wink, yawn, shed tears, use emojis.
 
 ## Notes
 
