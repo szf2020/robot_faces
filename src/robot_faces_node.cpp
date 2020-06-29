@@ -114,6 +114,7 @@ float eight_y = (float) g_window_height/8.0f;
 BezierPoints curr_mouth_points;
 
 const float CLOSE_ENOUGH_THRESHOLD = 3.0f; // in px
+const float BLINK_CLOSE_ENOUGH_THRESHOLD = 15.0f; // in px - more leeway is given to blinking because it moves much faster
 
 //bezier points enum member functions
 bool BezierPoints::operator== (const BezierPoints &other_point) const {
@@ -153,7 +154,7 @@ bool BezierPoints::withinDelta(const BezierPoints &other_point) const {
 
 // eyelids
 // state machine to manage blinking
-enum struct BlinkState { OPEN, DOWN, UP } curr_blinking_state = BlinkState::OPEN;
+enum struct BlinkState { OPEN, DOWN, UP } currBlinkingState = BlinkState::OPEN;
 sf::RectangleShape top_eyelid, bottom_eyelid;
 // sf::Vector2f top_eyelid_curr_pos, bottom_eyelid_curr_pos;
 
@@ -161,7 +162,7 @@ sf::RectangleShape top_eyelid, bottom_eyelid;
 const sf::Color REFERENCE_MARKER_COLOUR(0, 255, 0, 255);
 const int REFERENCE_MARKER_RADIUS = 5;
 sf::CircleShape reference_marker;
-
+const float TEMP_EYELID_HEIGHT = 300.0f; //TODO CHANGE THIS LATER
 
 /*
 
@@ -170,16 +171,20 @@ behaviour
 */
 
 const float SACCADE_SPEED = 90.0f; // px per second
+const float BLINK_SPEED = 250.0f; // px per second
+
 
 sf::Clock frame_clock; // gets time from one frame to the next
 
 std::mt19937 eng;
-sf::Clock saccade_clock; // measures time between saccades
+sf::Clock saccade_clock, blink_clock; // measures time between saccades and blinks
 
 int saccade_interval;
-std::uniform_int_distribution<int> saccade_time_dist(1000, 5000); // milliseconds between saccades
-std::uniform_int_distribution<int> saccade_pos_dist(-60, 60); // position to move for a saccade in px TODO HOW TO INIT MAX
+std::uniform_int_distribution<int> saccade_time_dist(200, 400); // milliseconds between saccades - based on wiki article about saccadic frequency in humans
+std::uniform_int_distribution<int> saccade_pos_dist(-10, 10); // position to move for a saccade in px TODO HOW TO INIT MAX
 
+int blink_interval;
+std::uniform_int_distribution<int> blink_time_dist(2000, 4000); // milliseconds between blinks, once every 2.85 seconds on average for humans
 
 
 
@@ -423,6 +428,8 @@ void dynamicReconfigureCb(robot_faces::ParametersConfig &config, uint32_t level)
 
   // colours
   updateColour(background_colour, config.background_colour);
+  top_eyelid.setFillColor(background_colour);
+  bottom_eyelid.setFillColor(background_colour);
 
   updateColour(nose_colour, config.nose_colour);
   nose_annulus.setFillColor(nose_colour);
@@ -484,6 +491,7 @@ int main(int argc, char **argv) {
 	eng.seed(rd());
 
 	saccade_interval = saccade_time_dist(eng);
+  blink_interval = blink_time_dist(eng);
 
   sf::RenderWindow renderWindow(sf::VideoMode(g_window_width, g_window_height), "robot_face");
 
@@ -539,13 +547,13 @@ int main(int argc, char **argv) {
 
 
   // eyelids
-  top_eyelid.setSize(sf::Vector2f(g_window_width, 100*eye_scaling_y*2));
-  top_eyelid.setFillColor(sf::Color(255,0,0,255));
-  top_eyelid.setOrigin(g_window_width/2.0f, 100*eye_scaling_y);
+  top_eyelid.setSize(sf::Vector2f(g_window_width, TEMP_EYELID_HEIGHT));
+  top_eyelid.setFillColor(background_colour);
+  top_eyelid.setOrigin(g_window_width/2.0f, TEMP_EYELID_HEIGHT/2.0f);
 
-  bottom_eyelid.setSize(sf::Vector2f(g_window_width, 100*eye_scaling_y*2));
-  bottom_eyelid.setFillColor(sf::Color(255,255,0,255));
-  bottom_eyelid.setOrigin(g_window_width/2.0f, 100*eye_scaling_y);
+  bottom_eyelid.setSize(sf::Vector2f(g_window_width, TEMP_EYELID_HEIGHT));
+  bottom_eyelid.setFillColor(background_colour);
+  bottom_eyelid.setOrigin(g_window_width/2.0f, TEMP_EYELID_HEIGHT/2.0f);
 
 
   //NOTE REMOVE TEMPORARY DECLARATION
@@ -582,9 +590,23 @@ int main(int argc, char **argv) {
     }
 
 
-
+    // timings
     float frame_delta_time = frame_clock.getElapsedTime().asMilliseconds()/1000.0f; // time since last frame draw
     frame_clock.restart();
+
+
+    if(blink_clock.getElapsedTime().asMilliseconds() > blink_interval) {
+
+      if(PRINT_DEBUG_MESSAGES) {
+        ROS_INFO("Perform blink");
+      }
+
+      currBlinkingState = BlinkState::DOWN;
+
+
+      blink_interval = blink_time_dist(eng);
+      blink_clock.restart();
+    }
 
 
     if(saccade_clock.getElapsedTime().asMilliseconds() > saccade_interval) {
@@ -617,17 +639,6 @@ int main(int argc, char **argv) {
     int mouth_reference_x = int(0.5f*g_window_width);
     int mouth_reference_y = int(mouth_height*g_window_height);
 
-    // interpolate between curr and goal positions
-    if(getDistance(curr_pupil_pos, goal_pupil_pos) < CLOSE_ENOUGH_THRESHOLD) {
-      curr_pupil_pos = goal_pupil_pos;
-    } else {
-      sf::Vector2f pupil_direction = normalize(goal_pupil_pos - curr_pupil_pos);
-      curr_pupil_pos += frame_delta_time*SACCADE_SPEED*pupil_direction;
-    }
-
-    sf::Vector2f pupil_direction = normalize(goal_pupil_pos - curr_pupil_pos);
-    curr_iris_pos += frame_delta_time*SACCADE_SPEED*pupil_direction*0.6f;
-
 
 
 
@@ -637,6 +648,17 @@ int main(int argc, char **argv) {
     /*
     RENDERING FACE
     */
+
+    // interpolate between curr and goal positions for the eyes
+    if(getDistance(curr_pupil_pos, goal_pupil_pos) < CLOSE_ENOUGH_THRESHOLD) {
+      curr_pupil_pos = goal_pupil_pos;
+    } else {
+      sf::Vector2f pupil_direction = normalize(goal_pupil_pos - curr_pupil_pos);
+      curr_pupil_pos += frame_delta_time*SACCADE_SPEED*pupil_direction;
+    }
+
+    sf::Vector2f pupil_direction = normalize(goal_pupil_pos - curr_pupil_pos);
+    curr_iris_pos += frame_delta_time*SACCADE_SPEED*pupil_direction*0.6f;
 
     // iris
     if(show_iris) {
@@ -675,11 +697,80 @@ int main(int argc, char **argv) {
 
 
     // eyelids
-    top_eyelid.setPosition(g_window_width/2.0f, eye_reference_y+curr_pupil_pos.y-100-100*eye_scaling_y);
+    //TODO SCALE HERE
+    //TODO CHANGE THIS. HALF THE HEIGHT OF THE EYE BROW PLUS THE HEIGHT OF THE EYE
+    int top_open_y = eye_reference_y+curr_pupil_pos.y-TEMP_EYELID_HEIGHT;
+    int bottom_open_y = eye_reference_y+curr_pupil_pos.y+TEMP_EYELID_HEIGHT;
+    int top_closed_y = eye_reference_y+curr_pupil_pos.y-TEMP_EYELID_HEIGHT/2.0f;
+    int bottom_closed_y = eye_reference_y+curr_pupil_pos.y+TEMP_EYELID_HEIGHT/2.0f;
+    int top_curr_y, bottom_curr_y;
+
+
+
+    switch(currBlinkingState) {
+        case BlinkState::OPEN:
+          top_curr_y = top_open_y;
+          bottom_curr_y = bottom_open_y;
+        break;
+
+
+        case BlinkState::DOWN:
+          { // scoped
+            int top_delta_dist = abs(top_curr_y - top_closed_y);
+            int bottom_delta_dist = abs(bottom_curr_y - bottom_closed_y);
+
+            if(top_delta_dist < BLINK_CLOSE_ENOUGH_THRESHOLD && bottom_delta_dist < BLINK_CLOSE_ENOUGH_THRESHOLD) {
+              top_curr_y = top_closed_y;
+              bottom_curr_y = bottom_closed_y;
+              currBlinkingState = BlinkState::UP;
+            } else {
+              // less than 40px to go, slow down speed to avoid overshooting
+              if(top_delta_dist<=40 || bottom_delta_dist<=40) {
+                top_curr_y += frame_delta_time*BLINK_SPEED*0.5f;
+                bottom_curr_y -= frame_delta_time*BLINK_SPEED*0.5f;
+              } else {
+                top_curr_y += frame_delta_time*BLINK_SPEED;
+                bottom_curr_y -= frame_delta_time*BLINK_SPEED;
+              }
+            }
+          }
+
+
+        break;
+
+        case BlinkState::UP:
+        { // scoped
+          int top_delta_dist = abs(top_curr_y - top_open_y);
+          int bottom_delta_dist = abs(bottom_curr_y - bottom_open_y);
+
+          if(top_delta_dist < BLINK_CLOSE_ENOUGH_THRESHOLD && bottom_delta_dist < BLINK_CLOSE_ENOUGH_THRESHOLD) {
+            top_curr_y = top_open_y;
+            bottom_curr_y = bottom_open_y;
+            currBlinkingState = BlinkState::OPEN;
+          } else {
+            // less than 40px to go, slow down speed to avoid overshooting
+            if(top_delta_dist<=40 || bottom_delta_dist<=40) {
+              top_curr_y -= frame_delta_time*BLINK_SPEED*0.5f;
+              bottom_curr_y += frame_delta_time*BLINK_SPEED*0.5f;
+            } else {
+              top_curr_y -= frame_delta_time*BLINK_SPEED;
+              bottom_curr_y += frame_delta_time*BLINK_SPEED;
+            }
+          }
+        }
+
+        break;
+
+    }
+
+
+    top_eyelid.setPosition(g_window_width/2.0f, top_curr_y);
     renderWindow.draw(top_eyelid);
 
-    bottom_eyelid.setPosition(g_window_width/2.0f, eye_reference_y+curr_pupil_pos.y+100+100*eye_scaling_y);
+    bottom_eyelid.setPosition(g_window_width/2.0f, bottom_curr_y);
     renderWindow.draw(bottom_eyelid);
+
+
 
 
 
