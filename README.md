@@ -15,13 +15,16 @@ Parameters are organised into groups such as positioning, scaling and behaviour.
 
 #### Misc
 
-| Parameter name      | Description                                                       | default | min | max |
-| ------------------- | ----------------------------------------------------------------- | ------- | --- | --- |
-| pupil_corner_radius | Corner radius of pupil: 0.0 is a straight corner, 1.0 is a circle | 1.0     | 0.0 | 1.0 |
-| iris_corner_radius  | Corner radius of iris: 0.0 is a straight corner, 1.0 is a circle  | 1.0     | 0.0 | 1.0 |
-| eyebrow_shape       | Enum for the eyebrow shape                                        | arc     |     |     |
-| iris_shape          | Enum for the iris shape (rounded rect, thick, oval, almond, arc)  | circle  |     |     |
-| nose_shape          | Enum describing the nose (annulus, button, curve and dog)         | button  |     |     |
+| Parameter name      | Description                                                       | default | min  | max   |
+| ------------------- | ----------------------------------------------------------------- | ------- | ---- | ----- |
+| pupil_corner_radius | Corner radius of pupil: 0.0 is a straight corner, 1.0 is a circle | 1.0     | 0.0  | 1.0   |
+| iris_corner_radius  | Corner radius of iris: 0.0 is a straight corner, 1.0 is a circle  | 1.0     | 0.0  | 1.0   |
+| eyebrow_shape       | Enum for the eyebrow shape                                        | arc     |      |       |
+| iris_shape          | Enum for the iris shape (rounded rect, thick, oval, almond, arc)  | circle  |      |       |
+| nose_shape          | Enum describing the nose (annulus, button, curve and dog)         | button  |      |       |
+| avr_blink_interval  | Average ms between blinks                                         | 3000    | 1000 | 20000 |
+| will_blink          | Whether or not to blink                                           | True    |      |       |
+| will_do_saccades    | Whether or not the eyes will do saccades                          | True    |      |       |
 
 
 
@@ -94,9 +97,9 @@ The faces can be interacted with through ROS topics and services.
 
 * Bugfix -pupils moving outside of iris
 
-* Blinking on/off, blinking interval, saccades on/off
-
 * Pupil scaling
+
+* adjust corner radius of pupil highlight to match the iris.
 
 ## Ideas
 
