@@ -282,6 +282,7 @@ void generateNoseCurvePoints() {
 
   float thickness = nose_scaling*nose_curve_thickness;
   float radius = nose_scaling*nose_radius;
+  std::cout << "radius " << radius <<std::endl;
   sf::Vector2f initial_position{0, -radius/2.0f};
 
   sf::Vector2f prev_vector = sf::Vector2f(initial_position.x+radius*sin(degToRad(-30)), initial_position.y+radius*cos(degToRad(-30)));
@@ -305,12 +306,12 @@ void generateNoseCurvePoints() {
   }
 
 
-  	left_nose_curve_fillet.setRadius(thickness);
-  	left_nose_curve_fillet.setOrigin(thickness, thickness);
-  	left_nose_curve_fillet.setPosition(initial_position.x+radius*sin(degToRad(-30)), initial_position.y+radius*cos(degToRad(-30)));
-  	right_nose_curve_fillet.setRadius(thickness);
-  	right_nose_curve_fillet.setOrigin(thickness, thickness);
-  	right_nose_curve_fillet.setPosition(initial_position.x+radius*sin(degToRad(30)), initial_position.y+radius*cos(degToRad(30)));
+	left_nose_curve_fillet.setRadius(thickness);
+	left_nose_curve_fillet.setOrigin(thickness, thickness);
+	left_nose_curve_fillet.setPosition(initial_position.x+radius*sin(degToRad(-30)), initial_position.y+radius*cos(degToRad(-30)));
+	right_nose_curve_fillet.setRadius(thickness);
+	right_nose_curve_fillet.setOrigin(thickness, thickness);
+	right_nose_curve_fillet.setPosition(initial_position.x+radius*sin(degToRad(30)), initial_position.y+radius*cos(degToRad(30)));
 }
 
 void generateEyebrowPoints() {

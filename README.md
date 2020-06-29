@@ -92,8 +92,6 @@ The faces can be interacted with through ROS topics and services.
 
 * Mouth: scaling in x and y, closed or open mouth.
 
-* Bugfix - nose curve not rendering properly.
-
 * Bugfix -pupils moving outside of iris
 
 * Bugfix - eyelids overshooting.

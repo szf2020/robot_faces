@@ -28,11 +28,10 @@ inline sf::Vector2f normalize(const sf::Vector2f v) {
 	return mag !=0 ? v / mag : sf::Vector2f(0,0);
 }
 
-template <class T>
-inline T degToRad(const T deg) {
+
+inline float degToRad(const float deg) {
   return deg * M_PI / 180.0f;
 }
-
 
 sf::VertexArray generateLineWThickness(const std::vector<sf::Vector2f>& points, const sf::Color color, const float thickness) {
 	sf::VertexArray array = sf::VertexArray(sf::TrianglesStrip);
