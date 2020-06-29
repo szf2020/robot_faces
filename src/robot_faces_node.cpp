@@ -72,8 +72,8 @@ sf::VertexArray nose_curve_points(sf::TrianglesStrip);
 sf::VertexArray nose_inverted_triangle_points(sf::TrianglesFan);
 
 // pupil
-sf::RoundedRectangle pupil_shape;
-int pupil_radius = int(g_window_width/15.0f);
+sf::RoundedRectangle pupil_shape, pupil_highlight;
+int pupil_diameter = int(g_window_width/15.0f);
 float pupil_corner_radius = 1.0f;
 sf::Vector2f goal_pupil_pos, curr_pupil_pos; // relative to the reference point in px
 
@@ -398,7 +398,11 @@ void dynamicReconfigureCb(robot_faces::ParametersConfig &config, uint32_t level)
   eyebrowShape = static_cast<EyebrowShape>(config.eyebrow_shape);
 
   pupil_corner_radius = config.pupil_corner_radius;
-  pupil_shape.setCornersRadius(pupil_corner_radius*pupil_radius/2.0f);
+  pupil_shape.setCornersRadius(pupil_corner_radius*pupil_diameter/2.0f);
+
+  // pupil_highlight.setCornersRadius(pupil_corner_radius*pupil_diameter/2.0f);
+
+
 
   iris_corner_radius = config.iris_corner_radius;
   iris_shape.setCornersRadius(iris_corner_radius*iris_diameter/2.0f);
@@ -517,11 +521,20 @@ int main(int argc, char **argv) {
   generateNoseInvertedTrianglePoints();
 
   // pupil
-  pupil_shape.setSize(sf::Vector2f(pupil_radius, pupil_radius));
-  pupil_shape.setOrigin(pupil_radius/2.0f, pupil_radius/2.0f);
-  pupil_shape.setCornersRadius(pupil_corner_radius* pupil_radius/2.0f);
+  pupil_shape.setSize(sf::Vector2f(pupil_diameter, pupil_diameter));
+  pupil_shape.setOrigin(pupil_diameter/2.0f, pupil_diameter/2.0f);
+  pupil_shape.setCornersRadius(pupil_corner_radius* pupil_diameter/2.0f);
   pupil_shape.setCornerPointCount(20);
   pupil_shape.setFillColor(pupil_colour);
+
+  pupil_highlight.setSize(sf::Vector2f(pupil_diameter/4.0f, pupil_diameter/4.0f));
+  pupil_highlight.setOrigin(pupil_diameter/8.0f, pupil_diameter/8.0f);
+  pupil_highlight.setCornersRadius(pupil_diameter/8.0f);
+  pupil_highlight.setCornerPointCount(10);
+  pupil_highlight.setFillColor(sf::Color(255,255,255,200));
+  // pupil_highlight.setFillColor(sf::Color(0,255,0,255));
+
+
 
 
   goal_pupil_pos = sf::Vector2f(0, 0);
@@ -693,6 +706,13 @@ int main(int argc, char **argv) {
       renderWindow.draw(pupil_shape);
       pupil_shape.setPosition(right_eye_reference_x+curr_pupil_pos.x, eye_reference_y+curr_pupil_pos.y);
       renderWindow.draw(pupil_shape);
+
+      pupil_highlight.setPosition(left_eye_reference_x+curr_pupil_pos.x-pupil_diameter/4.0f, eye_reference_y+curr_pupil_pos.y-pupil_diameter/4.0f);
+      renderWindow.draw(pupil_highlight);
+      pupil_highlight.setPosition(right_eye_reference_x+curr_pupil_pos.x-pupil_diameter/4.0f, eye_reference_y+curr_pupil_pos.y-pupil_diameter/4.0f);
+      renderWindow.draw(pupil_highlight);
+
+
     }
 
 

@@ -84,7 +84,7 @@ The faces can be interacted with through ROS topics and services.
 
 * Add tests for regex validation of colour parameters.
 
-* Add light highlight to nose, iris and pupil.
+* Add light highlight to nose and iris.
 
 * Make nose a rounded rectangle.
 
@@ -98,7 +98,9 @@ The faces can be interacted with through ROS topics and services.
 
 * Bugfix - eyelids overshooting.
 
-* blinking on/off, blinking interval, saccades on/off
+* Blinking on/off, blinking interval, saccades on/off
+
+* Pupil scaling
 
 ## Ideas
 
