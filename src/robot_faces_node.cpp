@@ -150,6 +150,13 @@ bool BezierPoints::withinDelta(const BezierPoints &other_point) const {
     }
 }
 
+
+// eyelids
+// state machine to manage blinking
+enum struct BlinkState { OPEN, DOWN, UP } curr_blinking_state = BlinkState::OPEN;
+sf::RectangleShape top_eyelid, bottom_eyelid;
+// sf::Vector2f top_eyelid_curr_pos, bottom_eyelid_curr_pos;
+
 // debug markers
 const sf::Color REFERENCE_MARKER_COLOUR(0, 255, 0, 255);
 const int REFERENCE_MARKER_RADIUS = 5;
@@ -531,6 +538,16 @@ int main(int argc, char **argv) {
   mouth_fillet.setOrigin(MOUTH_THICKNESS, MOUTH_THICKNESS);
 
 
+  // eyelids
+  top_eyelid.setSize(sf::Vector2f(g_window_width, 100*eye_scaling_y*2));
+  top_eyelid.setFillColor(sf::Color(255,0,0,255));
+  top_eyelid.setOrigin(g_window_width/2.0f, 100*eye_scaling_y);
+
+  bottom_eyelid.setSize(sf::Vector2f(g_window_width, 100*eye_scaling_y*2));
+  bottom_eyelid.setFillColor(sf::Color(255,255,0,255));
+  bottom_eyelid.setOrigin(g_window_width/2.0f, 100*eye_scaling_y);
+
+
   //NOTE REMOVE TEMPORARY DECLARATION
   int mouth_reference_x = int(0.5f*g_window_width);
   int mouth_reference_y = int(mouth_height*g_window_height);
@@ -650,6 +667,15 @@ int main(int argc, char **argv) {
       pupil_shape.setPosition(right_eye_reference_x+curr_pupil_pos.x, eye_reference_y+curr_pupil_pos.y);
       renderWindow.draw(pupil_shape);
     }
+
+
+    // eyelids
+    top_eyelid.setPosition(g_window_width/2.0f, eye_reference_y+curr_pupil_pos.y-100-100*eye_scaling_y);
+    renderWindow.draw(top_eyelid);
+
+    bottom_eyelid.setPosition(g_window_width/2.0f, eye_reference_y+curr_pupil_pos.y+100+100*eye_scaling_y);
+    renderWindow.draw(bottom_eyelid);
+
 
 
     // nose
