@@ -94,8 +94,6 @@ The faces can be interacted with through ROS topics and services.
 
 * Bugfix -pupils moving outside of iris
 
-* Bugfix - eyelids overshooting.
-
 * Blinking on/off, blinking interval, saccades on/off
 
 * Pupil scaling
