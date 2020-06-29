@@ -1,3 +1,12 @@
+/*
+Copyright 2020 Andrew Murtagh
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*/
 
 #include <fstream>
 #include <string>
@@ -10,115 +19,53 @@
 #include <robot_faces/ParametersConfig.h>
 
 #include <SFML/Graphics.hpp>
-// #include <SFML/Graphics/CircleShape.hpp>
 
 #include "robot_faces/utility.h"
 #include "robot_faces/roundedrectangle.h"
 
+
+
 /*
-debug variables
+debug variables - internal use by the author
 */
 bool PRINT_DEBUG_MESSAGES = true;
 bool DRAW_REFERENCE_MARKERS = true;
 
+
 /*
-parameters
+consts
 */
 int g_window_width = 800;
 int g_window_height = 600;
 
-// positioning
-float eye_spacing = 0.5f;
-float eye_height = 0.35f;
-float eyebrow_spacing = 0.2f;
-float nose_height = 0.5f;
-float mouth_height = 0.75f;
 
-// colours
-sf::Color background_colour(255,255,255,255);
-sf::Color nose_colour(41,41,41,255);
-sf::Color pupil_colour(0,0,0,255);
-sf::Color iris_colour(139,69,19,255);
-sf::Color eyebrow_colour(34,27,7,255);
-sf::Color mouth_colour(0,0,0,255);
+//TODO a better way of initialising these?
+const float DEFAULT_NOSE_CURVE_THICKNESS=5.0f;
+const int DEFAULT_NOSE_RADIUS = int(g_window_width/15.0f);
+const int DEFAULT_PUPIL_DIAMETER = int(g_window_width/15.0f);
+const int DEFAULT_IRIS_DIAMETER = int(g_window_width/7.0f);
+const int MOUTH_THICKNESS = 8.0f; //note this is actually half the thickness, make a parameter
+const float CLOSE_ENOUGH_THRESHOLD = 3.0f; // in px
+const float BLINK_CLOSE_ENOUGH_THRESHOLD = 6.0f; // in px - more leeway is given to blinking because it moves much faster
+const float SACCADE_SPEED = 90.0f; // px per second
+const float BLINK_SPEED = 220.0f; // px per second
+const float TEMP_EYELID_HEIGHT = 300.0f; //TODO CHANGE THIS LATER
+const sf::Color REFERENCE_MARKER_COLOUR(0, 255, 0, 255);
+const int REFERENCE_MARKER_RADIUS = 5;
 
-// display toggles
-bool show_eybrows = true;
-bool show_iris = true;
-bool show_pupil = true;
-bool show_nose = false;
-bool show_mouth = true;
-
-// scaling
-float nose_scaling = 1.0f;
-float eye_scaling_x = 1.0f;
-float eye_scaling_y = 1.0f;
-float eyebrow_scaling = 1.0f;
-float mouth_scaling_x = 1.0f;
-float mouth_scaling_y = 1.0f;
 
 /*
-sf elements
+data structures
 */
-
-// nose
-enum NoseShape { ANNULUS, BUTTON, CURVE, INVERTED_TRIANGLE } noseShape = BUTTON;
-
-float nose_curve_thickness=5.0f;
-int nose_radius = int(g_window_width/15.0f); //TODO a better way of initialising this?
-
-sf::CircleShape nose_annulus, left_nose_curve_fillet, right_nose_curve_fillet;
-sf::VertexArray nose_curve_points(sf::TrianglesStrip);
-sf::VertexArray nose_inverted_triangle_points(sf::TrianglesFan);
-
-// pupil
-sf::RoundedRectangle pupil_shape, pupil_highlight;
-int pupil_diameter = int(g_window_width/15.0f);
-float pupil_corner_radius = 1.0f;
-sf::Vector2f goal_pupil_pos, curr_pupil_pos; // relative to the reference point in px
-
-// iris
-enum struct IrisShape { ROUNDED_RECTANGLE, THICK, OVAL, ALMOND, ARC } irisShape = IrisShape::ROUNDED_RECTANGLE;
-sf::RoundedRectangle iris_shape;
-int iris_diameter = int(g_window_width/7.0f);
-float iris_corner_radius = 1.0f;
-sf::VertexArray iris_points(sf::TrianglesFan);
-sf::Vector2f curr_iris_pos; // relative to the reference point in px, no need for a goal. The iris just trails the pupil goal position
-
-// eyebrows
-enum struct EyebrowShape { CIRCULAR_ARC, RECTANGULAR, SQUARE, ROUNDED, STRAIGHT, HIGH_ARCH } eyebrowShape = EyebrowShape::CIRCULAR_ARC;
-sf::VertexArray eyebrow_points(sf::TrianglesFan);
-
-
-// mouth
-const int MOUTH_THICKNESS = 8.0f; //note this is actually half the thickness, make a parameter
-std::vector<sf::Vector2f> upper_mouth_vertices, lower_mouth_vertices;
-sf::CircleShape mouth_fillet;
-
-struct BezierPoints {
+struct MouthBezierPoints {
     sf::Vector2f upper_start, upper_end, upper_start_control, upper_end_control;
     sf::Vector2f lower_start, lower_end, lower_start_control, lower_end_control;
 
-    bool operator==(const BezierPoints &) const;
-    bool withinDelta(const BezierPoints &) const;
+    bool operator==(const MouthBezierPoints &) const;
+    bool withinDelta(const MouthBezierPoints &) const;
 };
 
-
-//TODO CHANGE THESE LATER
-float center_x = (float) g_window_width/2.0f;
-float quarter_x = (float) g_window_width/4.0f;
-float eight_x = (float) g_window_width/8.0f;
-float center_y = (float) g_window_height/2.0f;
-float quarter_y = (float) g_window_height/4.0f;
-float eight_y = (float) g_window_height/8.0f;
-
-BezierPoints curr_mouth_points;
-
-const float CLOSE_ENOUGH_THRESHOLD = 3.0f; // in px
-const float BLINK_CLOSE_ENOUGH_THRESHOLD = 6.0f; // in px - more leeway is given to blinking because it moves much faster
-
-//bezier points enum member functions
-bool BezierPoints::operator== (const BezierPoints &other_point) const {
+bool MouthBezierPoints::operator== (const MouthBezierPoints &other_point) const {
     if(upper_start == other_point.upper_start &&
         upper_end == other_point.upper_end &&
         upper_start_control == other_point.upper_start_control &&
@@ -135,7 +82,7 @@ bool BezierPoints::operator== (const BezierPoints &other_point) const {
     }
 }
 
-bool BezierPoints::withinDelta(const BezierPoints &other_point) const {
+bool MouthBezierPoints::withinDelta(const MouthBezierPoints &other_point) const {
 
     if(getDistance(upper_start, other_point.upper_start) < CLOSE_ENOUGH_THRESHOLD &&
         getDistance(upper_end, other_point.upper_end) < CLOSE_ENOUGH_THRESHOLD &&
@@ -153,29 +100,124 @@ bool BezierPoints::withinDelta(const BezierPoints &other_point) const {
 }
 
 
+
+
+
+/*
+parameters
+*/
+// positioning
+float eye_spacing           = 0.5f;
+float eye_height            = 0.35f;
+float eyebrow_spacing       = 0.2f;
+float nose_height           = 0.5f;
+float mouth_height          = 0.75f;
+
+float pupil_corner_radius   = 1.0f;
+float iris_corner_radius    = 1.0f;
+bool will_do_saccades       = true;
+bool will_blink             = true;
+int avr_blink_interval      = 3000; //ms
+
+// colours
+sf::Color background_colour(255,255,255,255);
+sf::Color nose_colour(41,41,41,255);
+sf::Color pupil_colour(0,0,0,255);
+sf::Color iris_colour(139,69,19,255);
+sf::Color eyebrow_colour(34,27,7,255);
+sf::Color mouth_colour(0,0,0,255);
+
+// display toggles
+bool show_eybrows           = true;
+bool show_iris              = true;
+bool show_pupil             = true;
+bool show_nose              = false;
+bool show_mouth             = true;
+
+// scaling
+float nose_scaling          = 1.0f;
+float eye_scaling_x         = 1.0f;
+float eye_scaling_y         = 1.0f;
+float eyebrow_scaling       = 1.0f;
+float mouth_scaling_x       = 1.0f;
+float mouth_scaling_y       = 1.0f;
+
+enum NoseShape {
+  ANNULUS,
+  BUTTON,
+  CURVE,
+  INVERTED_TRIANGLE
+} noseShape                 = BUTTON;
+
+enum struct IrisShape {
+  ROUNDED_RECTANGLE,
+  THICK,
+  OVAL,
+  ALMOND,
+  ARC
+} irisShape                 = IrisShape::ROUNDED_RECTANGLE;
+
+enum struct EyebrowShape {
+  CIRCULAR_ARC,
+  RECTANGULAR,
+  SQUARE,
+  ROUNDED,
+  STRAIGHT,
+  HIGH_ARCH
+} eyebrowShape              = EyebrowShape::CIRCULAR_ARC;
+
+
+
+/*
+sf elements
+*/
+
+// nose
+sf::CircleShape nose_annulus, left_nose_curve_fillet, right_nose_curve_fillet;
+sf::VertexArray nose_curve_points(sf::TrianglesStrip);
+sf::VertexArray nose_inverted_triangle_points(sf::TrianglesFan);
+
+// pupil
+sf::RoundedRectangle pupil_shape, pupil_highlight;
+sf::Vector2f goal_pupil_pos, curr_pupil_pos; // relative to the reference point in px
+
+// iris
+sf::RoundedRectangle iris_shape;
+sf::VertexArray iris_points(sf::TrianglesFan);
+sf::Vector2f curr_iris_pos; // relative to the reference point in px, no need for a goal. The iris just trails the pupil goal position
+
+// eyebrows
+sf::VertexArray eyebrow_points(sf::TrianglesFan);
+
+// mouth
+std::vector<sf::Vector2f> upper_mouth_vertices, lower_mouth_vertices;
+sf::CircleShape mouth_fillet;
+
+
+//TODO CHANGE THESE LATER
+float center_x = (float) g_window_width/2.0f;
+float quarter_x = (float) g_window_width/4.0f;
+float eight_x = (float) g_window_width/8.0f;
+float center_y = (float) g_window_height/2.0f;
+float quarter_y = (float) g_window_height/4.0f;
+float eight_y = (float) g_window_height/8.0f;
+
+MouthBezierPoints curr_mouth_points;
+
 // eyelids
+sf::RectangleShape top_eyelid, bottom_eyelid;
+
+// debug markers
+sf::CircleShape reference_marker;
+
+
+/*
+others
+*/
 
 // state machine to manage blinking
 enum struct BlinkState { OPEN, CLOSING, OPENING } currBlinkingState = BlinkState::OPEN;
-sf::RectangleShape top_eyelid, bottom_eyelid;
 
-
-// debug markers
-const sf::Color REFERENCE_MARKER_COLOUR(0, 255, 0, 255);
-const int REFERENCE_MARKER_RADIUS = 5;
-sf::CircleShape reference_marker;
-const float TEMP_EYELID_HEIGHT = 300.0f; //TODO CHANGE THIS LATER
-
-/*
-
-behaviour
-
-*/
-
-const float SACCADE_SPEED = 90.0f; // px per second
-const float BLINK_SPEED = 220.0f; // px per second
-
-bool will_do_saccades = true; // is a paramter
 
 sf::Clock frame_clock; // gets time from one frame to the next
 
@@ -186,10 +228,7 @@ int saccade_interval;
 std::uniform_int_distribution<int> saccade_time_dist(200, 400); // milliseconds between saccades - based on wiki article about saccadic frequency in humans
 std::uniform_int_distribution<int> saccade_pos_dist(-10, 10); // position to move for a saccade in px TODO HOW TO INIT MAX
 
-
-bool will_blink = true; // is a parameter
 int blink_interval;
-int avr_blink_interval = 3000; // is a parameter, in milliseconds
 std::uniform_int_distribution<int> blink_time_dist(avr_blink_interval-avr_blink_interval/2.0f, avr_blink_interval-avr_blink_interval/2.0f); // milliseconds between blinks, once every 2.85 seconds on average for humans
 
 
@@ -238,8 +277,8 @@ void generateIrisPoints() {
       float y_point = strtof(y.c_str(),0);
 
       // each of the drawings is 100px wide so we scale it by whatever the default width of the eyes is
-      x_point *= iris_diameter/100.f;
-      y_point *= iris_diameter/100.f;
+      x_point *= DEFAULT_IRIS_DIAMETER/100.f;
+      y_point *= DEFAULT_IRIS_DIAMETER/100.f;
 
       x_point = (float) initial_position.x + x_point;
       y_point = (float) initial_position.y + y_point;
@@ -286,8 +325,8 @@ void generateNoseCurvePoints() {
 
   nose_curve_points.clear();
 
-  float thickness = nose_scaling*nose_curve_thickness;
-  float radius = nose_scaling*nose_radius;
+  float thickness = nose_scaling*DEFAULT_NOSE_CURVE_THICKNESS;
+  float radius = nose_scaling*DEFAULT_NOSE_RADIUS;
   sf::Vector2f initial_position{0, -radius/2.0f};
 
   sf::Vector2f prev_vector = sf::Vector2f(initial_position.x+radius*sin(degToRad(-30)), initial_position.y+radius*cos(degToRad(-30)));
@@ -406,10 +445,10 @@ void dynamicReconfigureCb(robot_faces::ParametersConfig &config, uint32_t level)
   eyebrowShape = static_cast<EyebrowShape>(config.eyebrow_shape);
 
   pupil_corner_radius = config.pupil_corner_radius;
-  pupil_shape.setCornersRadius(pupil_corner_radius*pupil_diameter/2.0f);
+  pupil_shape.setCornersRadius(pupil_corner_radius*DEFAULT_PUPIL_DIAMETER/2.0f);
 
   iris_corner_radius = config.iris_corner_radius;
-  iris_shape.setCornersRadius(iris_corner_radius*iris_diameter/2.0f);
+  iris_shape.setCornersRadius(iris_corner_radius*DEFAULT_IRIS_DIAMETER/2.0f);
 
   will_blink = config.will_blink;
   avr_blink_interval = config.avr_blink_interval;
@@ -516,29 +555,27 @@ int main(int argc, char **argv) {
 
 
   /*
-  init
+  init sf elements
   */
 
   // nose
-  nose_annulus.setRadius(nose_radius);
-  nose_annulus.setOrigin(nose_radius, nose_radius);
-
-  sf::Vector2f initial_position{int(0.5f*g_window_width), 0};
+  nose_annulus.setRadius(DEFAULT_NOSE_RADIUS);
+  nose_annulus.setOrigin(DEFAULT_NOSE_RADIUS, DEFAULT_NOSE_RADIUS);
 
   generateNoseCurvePoints();
 
   generateNoseInvertedTrianglePoints();
 
   // pupil
-  pupil_shape.setSize(sf::Vector2f(pupil_diameter, pupil_diameter));
-  pupil_shape.setOrigin(pupil_diameter/2.0f, pupil_diameter/2.0f);
-  pupil_shape.setCornersRadius(pupil_corner_radius* pupil_diameter/2.0f);
+  pupil_shape.setSize(sf::Vector2f(DEFAULT_PUPIL_DIAMETER, DEFAULT_PUPIL_DIAMETER));
+  pupil_shape.setOrigin(DEFAULT_PUPIL_DIAMETER/2.0f, DEFAULT_PUPIL_DIAMETER/2.0f);
+  pupil_shape.setCornersRadius(pupil_corner_radius* DEFAULT_PUPIL_DIAMETER/2.0f);
   pupil_shape.setCornerPointCount(20);
   pupil_shape.setFillColor(pupil_colour);
 
-  pupil_highlight.setSize(sf::Vector2f(pupil_diameter/4.0f, pupil_diameter/4.0f));
-  pupil_highlight.setOrigin(pupil_diameter/8.0f, pupil_diameter/8.0f);
-  pupil_highlight.setCornersRadius(pupil_diameter/8.0f);
+  pupil_highlight.setSize(sf::Vector2f(DEFAULT_PUPIL_DIAMETER/4.0f, DEFAULT_PUPIL_DIAMETER/4.0f));
+  pupil_highlight.setOrigin(DEFAULT_PUPIL_DIAMETER/8.0f, DEFAULT_PUPIL_DIAMETER/8.0f);
+  pupil_highlight.setCornersRadius(DEFAULT_PUPIL_DIAMETER/8.0f);
   pupil_highlight.setCornerPointCount(10);
   pupil_highlight.setFillColor(sf::Color(255,255,255,200));
 
@@ -547,9 +584,9 @@ int main(int argc, char **argv) {
 
 
   // iris
-  iris_shape.setSize(sf::Vector2f(iris_diameter, iris_diameter));
-  iris_shape.setOrigin(iris_diameter/2.0f, iris_diameter/2.0f);
-  iris_shape.setCornersRadius(iris_corner_radius*iris_diameter/2.0f);
+  iris_shape.setSize(sf::Vector2f(DEFAULT_IRIS_DIAMETER, DEFAULT_IRIS_DIAMETER));
+  iris_shape.setOrigin(DEFAULT_IRIS_DIAMETER/2.0f, DEFAULT_IRIS_DIAMETER/2.0f);
+  iris_shape.setCornersRadius(iris_corner_radius*DEFAULT_IRIS_DIAMETER/2.0f);
   iris_shape.setCornerPointCount(20);
   iris_shape.setFillColor(iris_colour);
   generateIrisPoints();
@@ -597,7 +634,9 @@ int main(int argc, char **argv) {
 
 
 
-  // main loop
+  /*
+  main loop
+  */
   while(ros::ok() && renderWindow.isOpen()) {
 
     sf::Event event;
@@ -659,13 +698,11 @@ int main(int argc, char **argv) {
     int mouth_reference_y = int(mouth_height*g_window_height);
 
 
-
-
     renderWindow.clear(background_colour);
 
 
     /*
-    RENDERING FACE
+    RENDER FACE
     */
 
     // interpolate between curr and goal positions for the eyes
@@ -719,11 +756,10 @@ int main(int argc, char **argv) {
       pupil_shape.setPosition(right_eye_reference_x+curr_pupil_pos.x, eye_reference_y+curr_pupil_pos.y);
       renderWindow.draw(pupil_shape);
 
-      pupil_highlight.setPosition(left_eye_reference_x+curr_pupil_pos.x-pupil_diameter/4.0f, eye_reference_y+curr_pupil_pos.y-pupil_diameter/4.0f);
+      pupil_highlight.setPosition(left_eye_reference_x+curr_pupil_pos.x-DEFAULT_PUPIL_DIAMETER/4.0f, eye_reference_y+curr_pupil_pos.y-DEFAULT_PUPIL_DIAMETER/4.0f);
       renderWindow.draw(pupil_highlight);
-      pupil_highlight.setPosition(right_eye_reference_x+curr_pupil_pos.x-pupil_diameter/4.0f, eye_reference_y+curr_pupil_pos.y-pupil_diameter/4.0f);
+      pupil_highlight.setPosition(right_eye_reference_x+curr_pupil_pos.x-DEFAULT_PUPIL_DIAMETER/4.0f, eye_reference_y+curr_pupil_pos.y-DEFAULT_PUPIL_DIAMETER/4.0f);
       renderWindow.draw(pupil_highlight);
-
 
     }
 
@@ -733,8 +769,8 @@ int main(int argc, char **argv) {
       //TODO SCALE HERE
       //TODO IF BLINKING IS ON
       //TODO CHANGE THIS. HALF THE HEIGHT OF THE EYE BROW PLUS THE HEIGHT OF THE EYE
-      int top_open_y = eye_reference_y+curr_pupil_pos.y-TEMP_EYELID_HEIGHT/2.0f-iris_diameter/2.0f*eye_scaling_y-20.0f;
-      int bottom_open_y = eye_reference_y+curr_pupil_pos.y+TEMP_EYELID_HEIGHT/2.0f+iris_diameter/2.0f*eye_scaling_y+20.0f;
+      int top_open_y = eye_reference_y+curr_pupil_pos.y-TEMP_EYELID_HEIGHT/2.0f-DEFAULT_IRIS_DIAMETER/2.0f*eye_scaling_y-20.0f;
+      int bottom_open_y = eye_reference_y+curr_pupil_pos.y+TEMP_EYELID_HEIGHT/2.0f+DEFAULT_IRIS_DIAMETER/2.0f*eye_scaling_y+20.0f;
       int top_closed_y = eye_reference_y+curr_pupil_pos.y-TEMP_EYELID_HEIGHT/2.0f;
       int bottom_closed_y = eye_reference_y+curr_pupil_pos.y+TEMP_EYELID_HEIGHT/2.0f;
       int top_curr_y, bottom_curr_y;
@@ -835,8 +871,6 @@ int main(int argc, char **argv) {
     }
 
 
-
-
     // nose
     if(show_nose) {
 
@@ -886,9 +920,7 @@ int main(int argc, char **argv) {
     }
 
 
-    /*
-    debug markers
-    */
+    //debug markers
     if(DRAW_REFERENCE_MARKERS) {
 
       // left eye reference mark

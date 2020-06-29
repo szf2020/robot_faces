@@ -83,7 +83,7 @@ The faces can be interacted with through ROS topics and services.
 
 * Anti-aliasing setting.
 
-* Add image of possible faces and explain bezier points to README.
+* Add image of possible faces and explain bezier points in README.
 
 * Add tests for regex validation of colour parameters.
 
@@ -95,11 +95,15 @@ The faces can be interacted with through ROS topics and services.
 
 * Mouth: scaling in x and y, closed or open mouth.
 
-* Bugfix -pupils moving outside of iris
+* Bugfix - pupils moving outside of iris
 
 * Pupil scaling
 
-* adjust corner radius of pupil highlight to match the iris.
+* Adjust corner radius of pupil highlight to match the iris.
+
+* Change how saccades are done to match how gaze could done. Configure max movement radius and interpolate between 0 and 1.
+
+* Put timeout in speech, gaze and expression.
 
 ## Ideas
 
@@ -112,6 +116,8 @@ The faces can be interacted with through ROS topics and services.
 ## Notes
 
 Would like a way to parameterise the window dimensions but need to figure out a way to dynamically resize an SFML window.
+
+What to do about default width and height?
 
 ## Authors
 
