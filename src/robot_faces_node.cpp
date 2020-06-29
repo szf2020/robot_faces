@@ -113,7 +113,7 @@ float eight_y = (float) g_window_height/8.0f;
 
 BezierPoints curr_mouth_points;
 
-const float CLOSE_ENOUGH_THRESHOLD = 1.0f; // in px
+const float CLOSE_ENOUGH_THRESHOLD = 3.0f; // in px
 
 //bezier points enum member functions
 bool BezierPoints::operator== (const BezierPoints &other_point) const {
@@ -618,9 +618,14 @@ int main(int argc, char **argv) {
     int mouth_reference_y = int(mouth_height*g_window_height);
 
     // interpolate between curr and goal positions
-    sf::Vector2f pupil_direction = normalize(goal_pupil_pos - curr_pupil_pos);
-    curr_pupil_pos += frame_delta_time*SACCADE_SPEED*pupil_direction;
+    if(getDistance(curr_pupil_pos, goal_pupil_pos) < CLOSE_ENOUGH_THRESHOLD) {
+      curr_pupil_pos = goal_pupil_pos;
+    } else {
+      sf::Vector2f pupil_direction = normalize(goal_pupil_pos - curr_pupil_pos);
+      curr_pupil_pos += frame_delta_time*SACCADE_SPEED*pupil_direction;
+    }
 
+    sf::Vector2f pupil_direction = normalize(goal_pupil_pos - curr_pupil_pos);
     curr_iris_pos += frame_delta_time*SACCADE_SPEED*pupil_direction*0.6f;
 
 

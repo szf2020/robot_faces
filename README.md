@@ -94,13 +94,13 @@ The faces can be interacted with through ROS topics and services.
 
 * Fix nose curve bug.
 
-* Remove eye saccade movement jitter by checking if closer than threshold and snapping to final position.
-
 * Fix bug: pupils moving outside of iris
 
 ## Ideas
 
 * Include face parameter presets.
+
+* Nonlinear easing and interpolation.
 
 ## Notes
 
