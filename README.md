@@ -109,6 +109,8 @@ The face can be interacted with through ROS services.
 
 * Put timeout in speech, gaze and expression.
 
+* Change saccade movement to be a percentage of the gaze radius.
+
 ## Ideas
 
 * Include face parameter presets.

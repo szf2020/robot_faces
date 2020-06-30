@@ -218,6 +218,11 @@ sf::CircleShape reference_marker;
 others
 */
 
+float gaze_azimuth = 0.0f; // -1 to 1
+float gaze_elevation = 0.0f; // -1 to 1
+int gaze_radius = 60; // maximum radius of gaze
+
+
 // state machine to manage blinking
 enum struct BlinkState { OPEN, CLOSING, OPENING } currBlinkingState = BlinkState::OPEN;
 
@@ -540,6 +545,27 @@ bool setGazeCb(robot_faces::Gaze::Request &req, robot_faces::Gaze::Response &res
   if(PRINT_DEBUG_MESSAGES) {
     ROS_INFO("Change Gaze Request");
   }
+
+
+  gaze_elevation = req.elevation;
+  // clamp to within bounds
+  if(gaze_elevation<-1.0f) {
+    gaze_elevation = -1.0f;
+  }
+  if(gaze_elevation>1.0f) {
+    gaze_elevation = 1.0f;
+  }
+
+  gaze_azimuth = req.azimuth;
+  // clamp to within bounds
+  if(gaze_azimuth<-1.0f) {
+    gaze_azimuth = -1.0f;
+  }
+  if(gaze_azimuth>1.0f) {
+    gaze_azimuth = 1.0f;
+  }
+
+  res.done = true;
 
   return true;
 }
