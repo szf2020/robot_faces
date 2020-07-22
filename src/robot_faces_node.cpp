@@ -178,7 +178,9 @@ enum struct BlinkState { OPEN, CLOSING, OPENING } currBlinkingState = BlinkState
 sf::Clock frame_clock; // gets time from one frame to the next
 
 std::mt19937 eng;
-sf::Clock saccade_clock, blink_clock; // measures time between saccades and blinks
+sf::Clock saccade_clock, blink_clock, gaze_clock; // measures time between saccades and blinks
+
+int gaze_timeout = 0;
 
 int saccade_interval;
 std::uniform_int_distribution<int> saccade_time_dist(200, 400); // milliseconds between saccades - based on wiki article about saccadic frequency in humans
@@ -518,9 +520,28 @@ bool setGazeCb(robot_faces::Gaze::Request &req, robot_faces::Gaze::Response &res
     ROS_INFO_STREAM("Change Gaze Request " << req.elevation << ", " << req.azimuth << ", " << req.timeout);
   }
 
+  // handle timeout first and check for error to return prematurely
+  if(req.timeout<0) {
+    ROS_ERROR("Gaze timeout cannot be negative.");
+    res.done = false;
+    return true;
+  }
+
+  if(req.timeout>60000) {
+    ROS_ERROR("Gaze timeout cannot be more than one minute.");
+    res.done = false;
+    return true;
+  }
+
+  gaze_timeout = req.timeout;
+  gaze_clock.restart();
+  res.done = true;
+
+
 
   gaze_elevation = req.elevation;
-  // clamp to within bounds
+  
+  // clamp to within bounds instead of raising error
   if(gaze_elevation<-1.0f) {
     gaze_elevation = -1.0f;
   }
@@ -529,7 +550,8 @@ bool setGazeCb(robot_faces::Gaze::Request &req, robot_faces::Gaze::Response &res
   }
 
   gaze_azimuth = req.azimuth;
-  // clamp to within bounds
+
+  // clamp to within bounds instead of raising error
   if(gaze_azimuth<-1.0f) {
     gaze_azimuth = -1.0f;
   }
@@ -540,7 +562,9 @@ bool setGazeCb(robot_faces::Gaze::Request &req, robot_faces::Gaze::Response &res
   gaze_offset_x = int(gaze_azimuth*gaze_radius);
   gaze_offset_y = int(-1.0f*gaze_elevation*gaze_radius);
 
-  res.done = true;
+
+
+
 
   return true;
 }
@@ -681,7 +705,6 @@ int main(int argc, char **argv) {
 
       currBlinkingState = BlinkState::CLOSING;
 
-
       blink_interval = blink_time_dist(eng);
       blink_clock.restart();
     }
@@ -690,7 +713,7 @@ int main(int argc, char **argv) {
     if(will_do_saccades && saccade_clock.getElapsedTime().asMilliseconds() > saccade_interval) {
 
       if(PRINT_DEBUG_MESSAGES) {
-        ROS_INFO("Perform saccade");
+        // ROS_INFO("Perform saccade");
       }
 
       saccade_offset_x = saccade_pos_dist(eng);
@@ -698,6 +721,17 @@ int main(int argc, char **argv) {
 
       saccade_interval = saccade_time_dist(eng);
       saccade_clock.restart();
+    }
+
+    // gaze timeout
+    if(gaze_timeout!=0 && gaze_clock.getElapsedTime().asMilliseconds() > gaze_timeout) {
+
+      if(PRINT_DEBUG_MESSAGES) {
+        ROS_INFO("Gaze timed out");
+      }
+
+      gaze_offset_x = gaze_offset_y = gaze_timeout = 0;
+
     }
 
 
@@ -713,7 +747,6 @@ int main(int argc, char **argv) {
 
     int mouth_reference_x = int(0.5f*g_window_width);
     int mouth_reference_y = int(mouth_height*g_window_height);
-
 
     renderWindow.clear(background_colour);
 

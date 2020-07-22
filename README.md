@@ -125,7 +125,7 @@ timeout: 0"
 
 You can direct the gaze of the eyes through the `/robot_face/gaze` service call. Elevation is up and down and and Azimuth is left and right. Each variable ranges between -1.0 and 1.0 where -1.0 and 1.0 are the maximum extent of the gaze and 0.0 is looking straight ahead. Positive azimuth looks to the face's left, negative azimuth looks to the face's right, positive elevation looks up and negative elevation looks down.
 
-As with the expression service call, you can set a timeout in milliseconds or leave it at zero to permanently change the gaze.
+As with the expression service call, you can set a timeout in milliseconds after which, the gaze will return to center; or leave it at zero to permanently change the gaze.
 
 ```
 rosservice call /robot_face/gaze "header:
@@ -176,7 +176,7 @@ timeout: 0"
 
 * Expression timeout and transformation of all element.
 
-* Gaze timeout.
+* Speaking.
 
 ## Ideas
 
