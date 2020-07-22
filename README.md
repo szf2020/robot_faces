@@ -3,9 +3,16 @@
 robot_faces is a ROS package for rendering animated robot faces. Almost everything is parametised and can be changed through dynamic_recofigure to produce a variety of faces. All faces support several emotional expressions and actions such as speaking and blinking.
 
 
+
 ## Dependencies
 
 We use SFML to render animations. It does not come with a FindSFML.cmake so I added one in the cmake/ directory.
+
+## To Run
+
+`rosrun robot_faces robot_faces_node` or `roslaunch robot_faces robot_face.launch`
+
+Roslaunch is recommended.
 
 ## Parameters
 
@@ -77,19 +84,57 @@ Parameters are organised into groups such as positioning, scaling and behaviour.
 
 The face can be interacted with through ROS services.
 
-* Expression
+### Expression
 
-NEUTRAL
-SADNESS
-FEAR
-DISGUST
-ANGER
-JOY
-HAPPINESS
-AWE
-SURPRISE
+You can change the expression of the face to a number of predefined expressions listed below through the a `/robot_face/expression` service call.
 
-* Gaze
+1. NEUTRAL
+
+2. SADNESS
+
+3. FEAR
+
+4. DISGUST
+
+5. ANGER
+
+6. JOY
+
+7. HAPPINESS
+
+8. AWE
+
+9. SURPRISE
+
+The default expression is `NEUTRAL`. You can set a timeout in milliseconds for how long the expression should be held for, after it expires the expression will return to its previous state. If the timeout is set to zero the change in expression will be permanent.
+
+Below is an example of permanently changing the expression to surprise. The expression value is case-insensitive.
+
+```
+rosservice call /robot_face/expression "header:
+  seq: 0
+  stamp:
+    secs: 0
+    nsecs: 0
+  frame_id: ''
+expression: 'surprise'
+timeout: 0"
+```
+
+### Gaze
+
+```
+rosservice call /robot_face/gaze "header:
+  seq: 0
+  stamp:
+    secs: 0
+    nsecs: 0
+  frame_id: ''
+elevation: 0.0
+azimuth: 0.0
+timeout: 0"
+```
+
 
 ## TODO
 
@@ -127,6 +172,10 @@ SURPRISE
 
 * Read mouth bezier points from resource file.
 
+* Expression timeout and transformation of all element.
+
+* Gaze timeout
+
 ## Ideas
 
 * Include face parameter presets.
@@ -136,6 +185,8 @@ SURPRISE
 * Different eyelid shapes.
 
 * Wink, yawn, shed tears, use emojis.
+
+* Expression intensities.
 
 ## Notes
 
