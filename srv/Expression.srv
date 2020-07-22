@@ -1,5 +1,5 @@
 Header header
 string expression
-int32 timeout
+int64 timeout #timeout in milliseconds
 ---
 bool done

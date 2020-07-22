@@ -52,58 +52,11 @@ const float CLOSE_ENOUGH_THRESHOLD = 3.0f; // in px
 const float BLINK_CLOSE_ENOUGH_THRESHOLD = 6.0f; // in px - more leeway is given to blinking because it moves much faster
 const float SACCADE_SPEED = 90.0f; // px per second
 const float BLINK_SPEED = 220.0f; // px per second
+const float EXPRESSION_SPEED = 140.0f; //px per second
 const float TEMP_EYELID_HEIGHT = 300.0f; //TODO CHANGE THIS LATER
 const sf::Color REFERENCE_MARKER_COLOUR(0, 255, 0, 255);
 const int REFERENCE_MARKER_RADIUS = 5;
-
-
-/*
-data structures
-*/
-struct MouthBezierPoints {
-    sf::Vector2f upper_start, upper_end, upper_start_control, upper_end_control;
-    sf::Vector2f lower_start, lower_end, lower_start_control, lower_end_control;
-
-    bool operator==(const MouthBezierPoints &) const;
-    bool withinDelta(const MouthBezierPoints &) const;
-};
-
-bool MouthBezierPoints::operator== (const MouthBezierPoints &other_point) const {
-    if(upper_start == other_point.upper_start &&
-        upper_end == other_point.upper_end &&
-        upper_start_control == other_point.upper_start_control &&
-        upper_end_control == other_point.upper_end_control &&
-
-        lower_start == other_point.lower_start &&
-        lower_end == other_point.lower_end &&
-        lower_start_control == other_point.lower_start_control &&
-        lower_end_control == other_point.lower_end_control) {
-
-        return true;
-    } else {
-        return false;
-    }
-}
-
-bool MouthBezierPoints::withinDelta(const MouthBezierPoints &other_point) const {
-
-    if(getDistance(upper_start, other_point.upper_start) < CLOSE_ENOUGH_THRESHOLD &&
-        getDistance(upper_end, other_point.upper_end) < CLOSE_ENOUGH_THRESHOLD &&
-        getDistance(upper_start_control, other_point.upper_start_control) < CLOSE_ENOUGH_THRESHOLD &&
-        getDistance(upper_end_control, other_point.upper_end_control) < CLOSE_ENOUGH_THRESHOLD &&
-
-        getDistance(lower_start, other_point.lower_start) < CLOSE_ENOUGH_THRESHOLD &&
-        getDistance(lower_end, other_point.lower_end) < CLOSE_ENOUGH_THRESHOLD &&
-        getDistance(lower_start_control, other_point.lower_start_control) < CLOSE_ENOUGH_THRESHOLD &&
-        getDistance(lower_end_control, other_point.lower_end_control) < CLOSE_ENOUGH_THRESHOLD) {
-        return true;
-    } else {
-        return false;
-    }
-}
-
-
-
+const sf::Color BEZIER_MARKER_COLOUR(255, 0, 0, 255);
 
 
 /*
@@ -197,21 +150,15 @@ std::vector<sf::Vector2f> upper_mouth_vertices, lower_mouth_vertices;
 sf::CircleShape mouth_fillet;
 
 
-//TODO CHANGE THESE LATER
-float center_x = (float) g_window_width/2.0f;
-float quarter_x = (float) g_window_width/4.0f;
-float eight_x = (float) g_window_width/8.0f;
-float center_y = (float) g_window_height/2.0f;
-float quarter_y = (float) g_window_height/4.0f;
-float eight_y = (float) g_window_height/8.0f;
 
-MouthBezierPoints curr_mouth_points;
+MouthBezierPoints goal_mouth_points, curr_mouth_points;
+
 
 // eyelids
 sf::RectangleShape top_eyelid, bottom_eyelid;
 
 // debug markers
-sf::CircleShape reference_marker;
+sf::CircleShape reference_marker, bezier_marker;
 
 
 /*
@@ -471,20 +418,6 @@ void dynamicReconfigureCb(robot_faces::ParametersConfig &config, uint32_t level)
   nose_height = config.nose_height;
   mouth_height = config.mouth_height;
 
-  //NOTE REMOVE TEMPORARY DECLARATION
-  int mouth_reference_x = int(0.5f*g_window_width);
-  int mouth_reference_y = int(mouth_height*g_window_height);
-  curr_mouth_points = {
-     .upper_start = sf::Vector2f(mouth_reference_x-quarter_x, mouth_reference_y-10.0f),
-     .upper_end = sf::Vector2f(mouth_reference_x+quarter_x, mouth_reference_y-10.0f),
-     .upper_start_control = sf::Vector2f(mouth_reference_x-eight_x, mouth_reference_y-30.0f),
-     .upper_end_control = sf::Vector2f(mouth_reference_x+eight_x, mouth_reference_y-30.0f),
-
-     .lower_start = sf::Vector2f(mouth_reference_x-quarter_x, mouth_reference_y-10.0f),
-     .lower_end = sf::Vector2f(mouth_reference_x+quarter_x, mouth_reference_y-10.0f),
-     .lower_start_control = sf::Vector2f(mouth_reference_x-eight_x-20.0f, mouth_reference_y+quarter_y),
-     .lower_end_control = sf::Vector2f(mouth_reference_x+eight_x+20.0f, mouth_reference_y+quarter_y)
- };
 
   // colours
   updateColour(background_colour, config.background_colour);
@@ -534,16 +467,54 @@ void dynamicReconfigureCb(robot_faces::ParametersConfig &config, uint32_t level)
 bool setExpressionCb(robot_faces::Expression::Request &req, robot_faces::Expression::Response &res) {
 
   if(PRINT_DEBUG_MESSAGES) {
-    ROS_INFO("Change Expression Request");
+    ROS_INFO_STREAM("Change Expression Request: " << req.expression << ", " << req.timeout);
+  }
+
+  std::string expr = req.expression;
+
+  //convert to uppercase
+  std::transform(expr.begin(), expr.end(), expr.begin(), [](unsigned char c){ return std::toupper(c); });
+
+  if(expr == "NEUTRAL") {
+    goal_mouth_points = neutral_mouth_bezier_points;
+
+  } else if(expr == "SADNESS") {
+    goal_mouth_points = sadness_mouth_bezier_points;
+
+  } else if(expr == "FEAR") {
+    goal_mouth_points = fear_mouth_bezier_points;
+
+  } else if(expr == "DISGUST") {
+    goal_mouth_points = disgust_mouth_bezier_points;
+
+  } else if(expr == "ANGER") {
+    goal_mouth_points = anger_mouth_bezier_points;
+
+  } else if(expr == "JOY") {
+    goal_mouth_points = joy_mouth_bezier_points;
+
+  } else if(expr == "HAPPINESS") {
+    goal_mouth_points = happiness_mouth_bezier_points;
+
+  } else if(expr == "AWE") {
+    goal_mouth_points = awe_mouth_bezier_points;
+
+  } else if(expr == "SURPRISE") {
+    goal_mouth_points = surprise_mouth_bezier_points;
+
+  } else {
+    ROS_ERROR("Expression not recognised");
   }
 
   return true;
 }
 
+
+
 bool setGazeCb(robot_faces::Gaze::Request &req, robot_faces::Gaze::Response &res) {
 
   if(PRINT_DEBUG_MESSAGES) {
-    ROS_INFO("Change Gaze Request");
+    ROS_INFO_STREAM("Change Gaze Request " << req.elevation << ", " << req.azimuth << ", " << req.timeout);
   }
 
 
@@ -569,6 +540,7 @@ bool setGazeCb(robot_faces::Gaze::Request &req, robot_faces::Gaze::Response &res
 
   return true;
 }
+
 
 
 /*
@@ -653,6 +625,8 @@ int main(int argc, char **argv) {
   mouth_fillet.setFillColor(mouth_colour);
   mouth_fillet.setOrigin(MOUTH_THICKNESS, MOUTH_THICKNESS);
 
+  goal_mouth_points = neutral_mouth_bezier_points, curr_mouth_points = goal_mouth_points;
+
 
   // eyelids
   top_eyelid.setSize(sf::Vector2f(g_window_width, TEMP_EYELID_HEIGHT));
@@ -664,26 +638,16 @@ int main(int argc, char **argv) {
   bottom_eyelid.setOrigin(g_window_width/2.0f, TEMP_EYELID_HEIGHT/2.0f);
 
 
-  //NOTE REMOVE TEMPORARY DECLARATION
-  int mouth_reference_x = int(0.5f*g_window_width);
-  int mouth_reference_y = int(mouth_height*g_window_height);
-  curr_mouth_points = {
-     .upper_start = sf::Vector2f(mouth_reference_x-quarter_x, mouth_reference_y-10.0f),
-     .upper_end = sf::Vector2f(mouth_reference_x+quarter_x, mouth_reference_y-10.0f),
-     .upper_start_control = sf::Vector2f(mouth_reference_x-eight_x, mouth_reference_y-30.0f),
-     .upper_end_control = sf::Vector2f(mouth_reference_x+eight_x, mouth_reference_y-30.0f),
-
-     .lower_start = sf::Vector2f(mouth_reference_x-quarter_x, mouth_reference_y-10.0f),
-     .lower_end = sf::Vector2f(mouth_reference_x+quarter_x, mouth_reference_y-10.0f),
-     .lower_start_control = sf::Vector2f(mouth_reference_x-eight_x-20.0f, mouth_reference_y+quarter_y),
-     .lower_end_control = sf::Vector2f(mouth_reference_x+eight_x+20.0f, mouth_reference_y+quarter_y)
- };
 
   // reference markers
   reference_marker.setRadius(REFERENCE_MARKER_RADIUS);
   reference_marker.setOrigin(REFERENCE_MARKER_RADIUS, REFERENCE_MARKER_RADIUS);
   reference_marker.setFillColor(REFERENCE_MARKER_COLOUR);
 
+
+  bezier_marker.setRadius(REFERENCE_MARKER_RADIUS);
+  bezier_marker.setOrigin(REFERENCE_MARKER_RADIUS, REFERENCE_MARKER_RADIUS);
+  bezier_marker.setFillColor(BEZIER_MARKER_COLOUR);
 
 
   /*
@@ -757,7 +721,8 @@ int main(int argc, char **argv) {
     RENDER FACE
     */
 
-    // interpolate between curr and goal positions for the eyes
+    // interpolate between curr and goal positions
+
     if(will_do_saccades) {
       if(getDistance(curr_pupil_pos, goal_pupil_pos) < CLOSE_ENOUGH_THRESHOLD) {
         curr_pupil_pos = goal_pupil_pos;
@@ -772,6 +737,21 @@ int main(int argc, char **argv) {
       curr_pupil_pos = sf::Vector2f(0,0);
       curr_iris_pos = sf::Vector2f(0,0);
     }
+
+
+
+    if(show_mouth) {
+      if(curr_mouth_points.closeEnough(goal_mouth_points, CLOSE_ENOUGH_THRESHOLD)) {
+        curr_mouth_points = goal_mouth_points;
+      } else {
+        curr_mouth_points.moveTowards(goal_mouth_points, frame_delta_time, EXPRESSION_SPEED);
+      }
+
+    }
+
+
+
+
 
 
     // iris
@@ -827,9 +807,6 @@ int main(int argc, char **argv) {
       int bottom_closed_y = eye_reference_y+curr_pupil_pos.y+TEMP_EYELID_HEIGHT/2.0f;
       int top_curr_y, bottom_curr_y;
 
-      // top_curr_y = top_open_y;
-      // bottom_curr_y = bottom_open_y;
-
       switch(currBlinkingState) {
 
           case BlinkState::OPEN:
@@ -883,13 +860,19 @@ int main(int argc, char **argv) {
     // mouth
     if(show_mouth) {
 
-      //NOTE THIS IS DONE EVERY FRAME, SHOULD FIND A WAY TO OPTIMISE
-      //ALTHOUGH, IF IT MOVES AROUND THEN IT NEEDS TO BE COMPUTED EVERY FRAME...
-      upper_mouth_vertices = computeBezierCurve(curr_mouth_points.upper_start, curr_mouth_points.upper_end,
-          curr_mouth_points.upper_start_control, curr_mouth_points.upper_end_control);
 
-      lower_mouth_vertices = computeBezierCurve(curr_mouth_points.lower_start, curr_mouth_points.lower_end,
-          curr_mouth_points.lower_start_control, curr_mouth_points.lower_end_control);
+      MouthBezierPoints translated_points = curr_mouth_points.transform(mouth_reference_x, mouth_reference_y, mouth_scaling_x, mouth_scaling_y);
+
+      //NOTE THIS IS DONE EVERY FRAME, SHOULD FIND A WAY TO OPTIMISE
+      // upper_mouth_vertices = computeBezierCurve(translated_points.upper_start, translated_points.upper_end,
+          // translated_points.upper_start_control, translated_points.upper_end_control);
+
+      // lower_mouth_vertices = computeBezierCurve(translated_points.lower_start, translated_points.lower_end,
+          // translated_points.lower_start_control, translated_points.lower_end_control);
+
+
+      upper_mouth_vertices = translated_points.generateCurve(0);
+      lower_mouth_vertices = translated_points.generateCurve(1);
 
 
 
@@ -999,7 +982,37 @@ int main(int argc, char **argv) {
       reference_marker.setPosition(mouth_reference_x, mouth_reference_y);
       renderWindow.draw(reference_marker);
 
+      //mouth bezier marks
+      MouthBezierPoints translated_points = curr_mouth_points.transform(mouth_reference_x, mouth_reference_y, mouth_scaling_x, mouth_scaling_y);
+
+      bezier_marker.setPosition(translated_points.upper_start.x, translated_points.upper_start.y);
+      renderWindow.draw(bezier_marker);
+
+      bezier_marker.setPosition(translated_points.upper_end.x, translated_points.upper_end.y);
+      renderWindow.draw(bezier_marker);
+
+      bezier_marker.setPosition(translated_points.upper_start_control.x, translated_points.upper_start_control.y);
+      renderWindow.draw(bezier_marker);
+
+      bezier_marker.setPosition(translated_points.upper_end_control.x, translated_points.upper_end_control.y);
+      renderWindow.draw(bezier_marker);
+
+      bezier_marker.setPosition(translated_points.lower_start.x, translated_points.lower_start.y);
+      renderWindow.draw(bezier_marker);
+
+      bezier_marker.setPosition(translated_points.lower_end.x, translated_points.lower_end.y);
+      renderWindow.draw(bezier_marker);
+
+      bezier_marker.setPosition(translated_points.lower_start_control.x, translated_points.lower_start_control.y);
+      renderWindow.draw(bezier_marker);
+
+      bezier_marker.setPosition(translated_points.lower_end_control.x, translated_points.lower_end_control.y);
+      renderWindow.draw(bezier_marker);
+
+
     }
+
+
 
 
     renderWindow.display();
