@@ -18,7 +18,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #include <SFML/Graphics.hpp>
 
 
-std::regex rgba_regex("^(25[0-5]|2[0-4][0-9]|1[0-9]?[0-9]?|[1-9][0-9]?|[0-9]),?(25[0-5]|2[0-4][0-9]|1[0-9]?[0-9]?|[1-9][0-9]?|[0-9]),?(25[0-5]|2[0-4][0-9]|1[0-9]?[0-9]?|[1-9][0-9]?|[0-9]),?(25[0-5]|2[0-4][0-9]|1[0-9]?[0-9]?|[1-9][0-9]?|[0-9])$");
+std::regex temprgba_regex("^(25[0-5]|2[0-4][0-9]|1[0-9]?[0-9]?|[1-9][0-9]?|[0-9]),?(25[0-5]|2[0-4][0-9]|1[0-9]?[0-9]?|[1-9][0-9]?|[0-9]),?(25[0-5]|2[0-4][0-9]|1[0-9]?[0-9]?|[1-9][0-9]?|[0-9]),?(25[0-5]|2[0-4][0-9]|1[0-9]?[0-9]?|[1-9][0-9]?|[0-9])$");
 
 
 inline float getDistance(const sf::Vector2f one, const sf::Vector2f two) {
@@ -68,7 +68,7 @@ sf::VertexArray generateLineWThickness(const std::vector<sf::Vector2f>& points, 
 
 void updateColour(sf::Color& colour, const std::string& new_colour) {
 
-  if(std::regex_match(new_colour, rgba_regex)) {
+  if(std::regex_match(new_colour, temprgba_regex)) {
 
     std::stringstream ss(new_colour);
 

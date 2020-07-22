@@ -26,7 +26,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #include "robot_faces/utility.h"
 #include "robot_faces/roundedrectangle.h"
 
-
+#include "robot_faces/nose.h"
 
 /*
 debug variables - internal use by the author
@@ -43,8 +43,8 @@ int g_window_height = 600;
 
 
 //TODO a better way of initialising these?
-const float DEFAULT_NOSE_CURVE_THICKNESS=5.0f;
-const int DEFAULT_NOSE_RADIUS = int(g_window_width/15.0f);
+// const float DEFAULT_NOSE_CURVE_THICKNESS=5.0f;
+// const int DEFAULT_NOSE_RADIUS = int(g_window_width/15.0f);
 const int DEFAULT_PUPIL_DIAMETER = int(g_window_width/15.0f);
 const int DEFAULT_IRIS_DIAMETER = int(g_window_width/7.0f);
 const int MOUTH_THICKNESS = 8.0f; //note this is actually half the thickness, make a parameter
@@ -77,7 +77,7 @@ int avr_blink_interval      = 3000; //ms
 
 // colours
 sf::Color background_colour(255,255,255,255);
-sf::Color nose_colour(41,41,41,255);
+// sf::Color nose_colour(41,41,41,255);
 sf::Color pupil_colour(0,0,0,255);
 sf::Color iris_colour(139,69,19,255);
 sf::Color eyebrow_colour(34,27,7,255);
@@ -87,23 +87,23 @@ sf::Color mouth_colour(0,0,0,255);
 bool show_eybrows           = true;
 bool show_iris              = true;
 bool show_pupil             = true;
-bool show_nose              = false;
+// bool show_nose              = false;
 bool show_mouth             = true;
 
 // scaling
-float nose_scaling          = 1.0f;
+// float nose_scaling          = 1.0f;
 float eye_scaling_x         = 1.0f;
 float eye_scaling_y         = 1.0f;
 float eyebrow_scaling       = 1.0f;
 float mouth_scaling_x       = 1.0f;
 float mouth_scaling_y       = 1.0f;
 
-enum NoseShape {
-  ANNULUS,
-  BUTTON,
-  CURVE,
-  INVERTED_TRIANGLE
-} noseShape                 = BUTTON;
+// enum NoseShape {
+//   ANNULUS,
+//   BUTTON,
+//   CURVE,
+//   INVERTED_TRIANGLE
+// } noseShape                 = BUTTON;
 
 enum struct IrisShape {
   ROUNDED_RECTANGLE,
@@ -128,10 +128,12 @@ enum struct EyebrowShape {
 sf elements
 */
 
+Nose nose;
+
 // nose
-sf::CircleShape nose_annulus, left_nose_curve_fillet, right_nose_curve_fillet;
-sf::VertexArray nose_curve_points(sf::TrianglesStrip);
-sf::VertexArray nose_inverted_triangle_points(sf::TrianglesFan);
+// sf::CircleShape nose_annulus, left_nose_curve_fillet, right_nose_curve_fillet;
+// sf::VertexArray nose_curve_points(sf::TrianglesStrip);
+// sf::VertexArray nose_inverted_triangle_points(sf::TrianglesFan);
 
 // pupil
 sf::RoundedRectangle pupil_shape, pupil_highlight;
@@ -196,7 +198,6 @@ helper functions
 //TODO MOVE THESE UTILITY FILE
 //TODO REFACTOR TO USE generateLineWThickness FUNCTION
 */
-
 void generateIrisPoints() {
 
   std::string filename = "";
@@ -246,6 +247,7 @@ void generateIrisPoints() {
 
 }
 
+/*
 void generateNoseInvertedTrianglePoints() {
 
   nose_inverted_triangle_points.clear();
@@ -316,6 +318,7 @@ void generateNoseCurvePoints() {
 	right_nose_curve_fillet.setPosition(initial_position.x+radius*sin(degToRad(30)), initial_position.y+radius*cos(degToRad(30)));
 }
 
+*/
 void generateEyebrowPoints() {
 
   std::string filename = "eyebrow_arc";
@@ -386,7 +389,7 @@ void generateEyebrowPoints() {
 /*
 callback functions
 */
-void dynamicReconfigureCb(robot_faces::ParametersConfig &config, uint32_t level) {
+void dynamicReconfigureCb(robot_faces::ParametersConfig& config, uint32_t level) {
 
 
   if(PRINT_DEBUG_MESSAGES) {
@@ -398,7 +401,8 @@ void dynamicReconfigureCb(robot_faces::ParametersConfig &config, uint32_t level)
 
   irisShape = static_cast<IrisShape>(config.iris_shape);
 
-  noseShape = static_cast<NoseShape>(config.nose_shape);
+  // noseShape = static_cast<NoseShape>(config.nose_shape);
+  nose.setShape(static_cast<Nose::NoseShape>(config.nose_shape));
 
   eyebrowShape = static_cast<EyebrowShape>(config.eyebrow_shape);
 
@@ -427,10 +431,11 @@ void dynamicReconfigureCb(robot_faces::ParametersConfig &config, uint32_t level)
   top_eyelid.setFillColor(background_colour);
   bottom_eyelid.setFillColor(background_colour);
 
-  updateColour(nose_colour, config.nose_colour);
-  nose_annulus.setFillColor(nose_colour);
-  left_nose_curve_fillet.setFillColor(nose_colour);
-  right_nose_curve_fillet.setFillColor(nose_colour);
+  nose.setColour(config.nose_colour);
+  // updateColour(nose_colour, config.nose_colour);
+  // nose_annulus.setFillColor(nose_colour);
+  // left_nose_curve_fillet.setFillColor(nose_colour);
+  // right_nose_curve_fillet.setFillColor(nose_colour);
 
   updateColour(eyebrow_colour, config.eyebrow_colour);
 
@@ -447,11 +452,15 @@ void dynamicReconfigureCb(robot_faces::ParametersConfig &config, uint32_t level)
   show_eybrows = config.show_eybrows;
   show_iris = config.show_iris;
   show_pupil = config.show_pupil;
-  show_nose = config.show_nose;
+  // show_nose = config.show_nose;
+  nose.setShow(config.show_nose);
+
   show_mouth = config.show_mouth;
 
   // scaling
-  nose_scaling = config.nose_scaling;
+  // nose_scaling = config.nose_scaling;
+  nose.setScaleX(config.nose_scaling);
+
   eye_scaling_x = config.eye_scaling_x;
   eye_scaling_y = config.eye_scaling_y;
   eyebrow_scaling = config.eyebrow_scaling;
@@ -459,15 +468,16 @@ void dynamicReconfigureCb(robot_faces::ParametersConfig &config, uint32_t level)
   mouth_scaling_y = config.mouth_scaling_y;
 
   // recompute vertexarray points
+  /*
   generateNoseCurvePoints();
   generateNoseInvertedTrianglePoints();
+  */
   generateIrisPoints();
   generateEyebrowPoints();
 }
 
 
-
-bool setExpressionCb(robot_faces::Expression::Request &req, robot_faces::Expression::Response &res) {
+bool setExpressionCb(robot_faces::Expression::Request& req, robot_faces::Expression::Response& res) {
 
   if(PRINT_DEBUG_MESSAGES) {
     ROS_INFO_STREAM("Change Expression Request: " << req.expression << ", " << req.timeout);
@@ -513,8 +523,7 @@ bool setExpressionCb(robot_faces::Expression::Request &req, robot_faces::Express
 }
 
 
-
-bool setGazeCb(robot_faces::Gaze::Request &req, robot_faces::Gaze::Response &res) {
+bool setGazeCb(robot_faces::Gaze::Request& req, robot_faces::Gaze::Response& res) {
 
   if(PRINT_DEBUG_MESSAGES) {
     ROS_INFO_STREAM("Change Gaze Request " << req.elevation << ", " << req.azimuth << ", " << req.timeout);
@@ -537,10 +546,8 @@ bool setGazeCb(robot_faces::Gaze::Request &req, robot_faces::Gaze::Response &res
   gaze_clock.restart();
   res.done = true;
 
-
-
   gaze_elevation = req.elevation;
-  
+
   // clamp to within bounds instead of raising error
   if(gaze_elevation<-1.0f) {
     gaze_elevation = -1.0f;
@@ -562,12 +569,9 @@ bool setGazeCb(robot_faces::Gaze::Request &req, robot_faces::Gaze::Response &res
   gaze_offset_x = int(gaze_azimuth*gaze_radius);
   gaze_offset_y = int(-1.0f*gaze_elevation*gaze_radius);
 
-
-
-
-
   return true;
 }
+
 
 
 
@@ -606,17 +610,23 @@ int main(int argc, char **argv) {
   // renderWindow.setFramerateLimit(30);
 
 
+
+
   /*
   init sf elements
   */
 
+  nose.setReferenceX(0.5*g_window_width);
+  nose.setReferenceY(0.5*g_window_height);
   // nose
+  /*
   nose_annulus.setRadius(DEFAULT_NOSE_RADIUS);
   nose_annulus.setOrigin(DEFAULT_NOSE_RADIUS, DEFAULT_NOSE_RADIUS);
 
   generateNoseCurvePoints();
 
   generateNoseInvertedTrianglePoints();
+  */
 
 
   // pupil
@@ -646,8 +656,10 @@ int main(int argc, char **argv) {
 
   curr_iris_offset = goal_pupil_offset;
 
+
   // eyebrows
   generateEyebrowPoints();
+
 
   // mouth
   mouth_fillet.setRadius(MOUTH_THICKNESS);
@@ -676,6 +688,7 @@ int main(int argc, char **argv) {
   bezier_marker.setRadius(REFERENCE_MARKER_RADIUS);
   bezier_marker.setOrigin(REFERENCE_MARKER_RADIUS, REFERENCE_MARKER_RADIUS);
   bezier_marker.setFillColor(BEZIER_MARKER_COLOUR);
+
 
 
   /*
@@ -822,7 +835,6 @@ int main(int argc, char **argv) {
 
 
     // eyelids
-
     if(will_blink) {
       //TODO SCALE HERE
       //TODO IF BLINKING IS ON
@@ -926,7 +938,8 @@ int main(int argc, char **argv) {
       renderWindow.draw(eyebrow_points, t);
     }
 
-
+    nose.draw(renderWindow);
+    /*
     // nose
     if(show_nose) {
 
@@ -972,6 +985,7 @@ int main(int argc, char **argv) {
       }
 
     }
+    */
 
 
     //debug markers
@@ -994,8 +1008,10 @@ int main(int argc, char **argv) {
       renderWindow.draw(reference_marker);
 
       // nose reference mark
+      /*
       reference_marker.setPosition(nose_reference_x, nose_reference_y);
       renderWindow.draw(reference_marker);
+      */
 
       // mouth reference mark
       reference_marker.setPosition(mouth_reference_x, mouth_reference_y);
