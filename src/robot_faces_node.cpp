@@ -135,12 +135,13 @@ sf::VertexArray nose_inverted_triangle_points(sf::TrianglesFan);
 
 // pupil
 sf::RoundedRectangle pupil_shape, pupil_highlight;
-sf::Vector2f goal_pupil_pos, curr_pupil_pos; // relative to the reference point in px
+int gaze_offset_x, gaze_offset_y, saccade_offset_x, saccade_offset_y;
+sf::Vector2f goal_pupil_offset, curr_pupil_offset; // relative to the reference point in px
 
 // iris
 sf::RoundedRectangle iris_shape;
 sf::VertexArray iris_points(sf::TrianglesFan);
-sf::Vector2f curr_iris_pos; // relative to the reference point in px, no need for a goal. The iris just trails the pupil goal position
+sf::Vector2f curr_iris_offset; // relative to the reference point in px, no need for a goal. The iris just trails the pupil goal position
 
 // eyebrows
 sf::VertexArray eyebrow_points(sf::TrianglesFan);
@@ -148,7 +149,6 @@ sf::VertexArray eyebrow_points(sf::TrianglesFan);
 // mouth
 std::vector<sf::Vector2f> upper_mouth_vertices, lower_mouth_vertices;
 sf::CircleShape mouth_fillet;
-
 
 
 MouthBezierPoints goal_mouth_points, curr_mouth_points;
@@ -165,6 +165,7 @@ sf::CircleShape reference_marker, bezier_marker;
 others
 */
 
+// TODO MOVE THESE TO REST OF CONSTS
 float gaze_azimuth = 0.0f; // -1 to 1
 float gaze_elevation = 0.0f; // -1 to 1
 int gaze_radius = 60; // maximum radius of gaze
@@ -536,6 +537,9 @@ bool setGazeCb(robot_faces::Gaze::Request &req, robot_faces::Gaze::Response &res
     gaze_azimuth = 1.0f;
   }
 
+  gaze_offset_x = int(gaze_azimuth*gaze_radius);
+  gaze_offset_y = int(-1.0f*gaze_elevation*gaze_radius);
+
   res.done = true;
 
   return true;
@@ -590,6 +594,7 @@ int main(int argc, char **argv) {
 
   generateNoseInvertedTrianglePoints();
 
+
   // pupil
   pupil_shape.setSize(sf::Vector2f(DEFAULT_PUPIL_DIAMETER, DEFAULT_PUPIL_DIAMETER));
   pupil_shape.setOrigin(DEFAULT_PUPIL_DIAMETER/2.0f, DEFAULT_PUPIL_DIAMETER/2.0f);
@@ -603,8 +608,8 @@ int main(int argc, char **argv) {
   pupil_highlight.setCornerPointCount(10);
   pupil_highlight.setFillColor(sf::Color(255,255,255,200));
 
-  goal_pupil_pos = sf::Vector2f(0, 0);
-  curr_pupil_pos = goal_pupil_pos;
+  goal_pupil_offset = sf::Vector2f(0, 0);
+  curr_pupil_offset = goal_pupil_offset;
 
 
   // iris
@@ -615,7 +620,7 @@ int main(int argc, char **argv) {
   iris_shape.setFillColor(iris_colour);
   generateIrisPoints();
 
-  curr_iris_pos = goal_pupil_pos;
+  curr_iris_offset = goal_pupil_offset;
 
   // eyebrows
   generateEyebrowPoints();
@@ -636,7 +641,6 @@ int main(int argc, char **argv) {
   bottom_eyelid.setSize(sf::Vector2f(g_window_width, TEMP_EYELID_HEIGHT));
   bottom_eyelid.setFillColor(background_colour);
   bottom_eyelid.setOrigin(g_window_width/2.0f, TEMP_EYELID_HEIGHT/2.0f);
-
 
 
   // reference markers
@@ -689,11 +693,8 @@ int main(int argc, char **argv) {
         ROS_INFO("Perform saccade");
       }
 
-      int delta_x = saccade_pos_dist(eng);
-      int delta_y = saccade_pos_dist(eng);
-
-      goal_pupil_pos = sf::Vector2f(delta_x, delta_y);
-
+      saccade_offset_x = saccade_pos_dist(eng);
+      saccade_offset_y = saccade_pos_dist(eng);
 
       saccade_interval = saccade_time_dist(eng);
       saccade_clock.restart();
@@ -722,22 +723,21 @@ int main(int argc, char **argv) {
     */
 
     // interpolate between curr and goal positions
-
     if(will_do_saccades) {
-      if(getDistance(curr_pupil_pos, goal_pupil_pos) < CLOSE_ENOUGH_THRESHOLD) {
-        curr_pupil_pos = goal_pupil_pos;
-      } else {
-        sf::Vector2f pupil_direction = normalize(goal_pupil_pos - curr_pupil_pos);
-        curr_pupil_pos += frame_delta_time*SACCADE_SPEED*pupil_direction;
-      }
-
-      sf::Vector2f pupil_direction = normalize(goal_pupil_pos - curr_pupil_pos);
-      curr_iris_pos += frame_delta_time*SACCADE_SPEED*pupil_direction*0.6f;
+      goal_pupil_offset = sf::Vector2f(gaze_offset_x+saccade_offset_x, gaze_offset_y+saccade_offset_y);
     } else {
-      curr_pupil_pos = sf::Vector2f(0,0);
-      curr_iris_pos = sf::Vector2f(0,0);
+      goal_pupil_offset = sf::Vector2f(gaze_offset_x, gaze_offset_y);
     }
 
+
+    if(getDistance(goal_pupil_offset, curr_pupil_offset) < CLOSE_ENOUGH_THRESHOLD) {
+      curr_pupil_offset = goal_pupil_offset;
+      curr_iris_offset = goal_pupil_offset*0.6f;
+    } else {
+      sf::Vector2f pupil_direction = normalize(goal_pupil_offset - curr_pupil_offset);
+      curr_pupil_offset += frame_delta_time*SACCADE_SPEED*pupil_direction;
+      curr_iris_offset += frame_delta_time*SACCADE_SPEED*pupil_direction*0.6f;
+    }
 
 
     if(show_mouth) {
@@ -751,29 +751,26 @@ int main(int argc, char **argv) {
 
 
 
-
-
-
     // iris
     if(show_iris) {
 
       if(irisShape==IrisShape::THICK || irisShape==IrisShape::OVAL || irisShape==IrisShape::ALMOND || irisShape==IrisShape::ARC) {
-        sf::Transform t(1.f*eye_scaling_x, 0.f, left_eye_reference_x+curr_iris_pos.x,
-                         0.f,  eye_scaling_y, eye_reference_y+curr_iris_pos.y,
+        sf::Transform t(1.f*eye_scaling_x, 0.f, left_eye_reference_x+curr_iris_offset.x,
+                         0.f,  eye_scaling_y, eye_reference_y+curr_iris_offset.y,
                          0.f,  0.f, 1.f);
         renderWindow.draw(iris_points, t);
 
-        t = sf::Transform(-1.f*eye_scaling_x, 0.f, right_eye_reference_x+curr_iris_pos.x,
-                         0.f,  eye_scaling_y, eye_reference_y+curr_iris_pos.y,
+        t = sf::Transform(-1.f*eye_scaling_x, 0.f, right_eye_reference_x+curr_iris_offset.x,
+                         0.f,  eye_scaling_y, eye_reference_y+curr_iris_offset.y,
                          0.f,  0.f, 1.f);
 
         renderWindow.draw(iris_points, t);
 
       } else {
         iris_shape.setScale(eye_scaling_x, eye_scaling_y);
-        iris_shape.setPosition(left_eye_reference_x+curr_iris_pos.x, eye_reference_y+curr_iris_pos.y);
+        iris_shape.setPosition(left_eye_reference_x+curr_iris_offset.x, eye_reference_y+curr_iris_offset.y);
         renderWindow.draw(iris_shape);
-        iris_shape.setPosition(right_eye_reference_x+curr_iris_pos.x, eye_reference_y+curr_iris_pos.y);
+        iris_shape.setPosition(right_eye_reference_x+curr_iris_offset.x, eye_reference_y+curr_iris_offset.y);
         renderWindow.draw(iris_shape);
       }
 
@@ -783,28 +780,24 @@ int main(int argc, char **argv) {
     // pupils
     if(show_pupil) {
 
-      pupil_shape.setPosition(left_eye_reference_x+curr_pupil_pos.x, eye_reference_y+curr_pupil_pos.y);
+      pupil_shape.setPosition(left_eye_reference_x+curr_pupil_offset.x, eye_reference_y+curr_pupil_offset.y);
       renderWindow.draw(pupil_shape);
-      pupil_shape.setPosition(right_eye_reference_x+curr_pupil_pos.x, eye_reference_y+curr_pupil_pos.y);
+      pupil_shape.setPosition(right_eye_reference_x+curr_pupil_offset.x, eye_reference_y+curr_pupil_offset.y);
       renderWindow.draw(pupil_shape);
-
-      pupil_highlight.setPosition(left_eye_reference_x+curr_pupil_pos.x-DEFAULT_PUPIL_DIAMETER/4.0f, eye_reference_y+curr_pupil_pos.y-DEFAULT_PUPIL_DIAMETER/4.0f);
-      renderWindow.draw(pupil_highlight);
-      pupil_highlight.setPosition(right_eye_reference_x+curr_pupil_pos.x-DEFAULT_PUPIL_DIAMETER/4.0f, eye_reference_y+curr_pupil_pos.y-DEFAULT_PUPIL_DIAMETER/4.0f);
-      renderWindow.draw(pupil_highlight);
 
     }
 
 
     // eyelids
+
     if(will_blink) {
       //TODO SCALE HERE
       //TODO IF BLINKING IS ON
       //TODO CHANGE THIS. HALF THE HEIGHT OF THE EYE BROW PLUS THE HEIGHT OF THE EYE
-      int top_open_y = eye_reference_y+curr_pupil_pos.y-TEMP_EYELID_HEIGHT/2.0f-DEFAULT_IRIS_DIAMETER/2.0f*eye_scaling_y-20.0f;
-      int bottom_open_y = eye_reference_y+curr_pupil_pos.y+TEMP_EYELID_HEIGHT/2.0f+DEFAULT_IRIS_DIAMETER/2.0f*eye_scaling_y+20.0f;
-      int top_closed_y = eye_reference_y+curr_pupil_pos.y-TEMP_EYELID_HEIGHT/2.0f;
-      int bottom_closed_y = eye_reference_y+curr_pupil_pos.y+TEMP_EYELID_HEIGHT/2.0f;
+      int top_open_y = eye_reference_y+curr_pupil_offset.y-TEMP_EYELID_HEIGHT/2.0f-DEFAULT_IRIS_DIAMETER/2.0f*eye_scaling_y-20.0f;
+      int bottom_open_y = eye_reference_y+curr_pupil_offset.y+TEMP_EYELID_HEIGHT/2.0f+DEFAULT_IRIS_DIAMETER/2.0f*eye_scaling_y+20.0f;
+      int top_closed_y = eye_reference_y+curr_pupil_offset.y-TEMP_EYELID_HEIGHT/2.0f;
+      int bottom_closed_y = eye_reference_y+curr_pupil_offset.y+TEMP_EYELID_HEIGHT/2.0f;
       int top_curr_y, bottom_curr_y;
 
       switch(currBlinkingState) {
@@ -816,36 +809,31 @@ int main(int argc, char **argv) {
 
 
           case BlinkState::CLOSING:
-          { // scoped
-            if(top_curr_y >= top_closed_y-BLINK_CLOSE_ENOUGH_THRESHOLD || bottom_curr_y <= bottom_closed_y+BLINK_CLOSE_ENOUGH_THRESHOLD) {
-              top_curr_y = top_closed_y;
-                bottom_curr_y = bottom_closed_y;
-              currBlinkingState = BlinkState::OPENING;
-            } else {
-              float this_frame_displacement = frame_delta_time*BLINK_SPEED;
-              top_curr_y += this_frame_displacement;
-              bottom_curr_y -= this_frame_displacement;
+            { // scoped
+              if(top_curr_y >= top_closed_y-BLINK_CLOSE_ENOUGH_THRESHOLD || bottom_curr_y <= bottom_closed_y+BLINK_CLOSE_ENOUGH_THRESHOLD) {
+                top_curr_y = top_closed_y;
+                  bottom_curr_y = bottom_closed_y;
+                currBlinkingState = BlinkState::OPENING;
+              } else {
+                float this_frame_displacement = frame_delta_time*BLINK_SPEED;
+                top_curr_y += this_frame_displacement;
+                bottom_curr_y -= this_frame_displacement;
+              }
             }
-
-          }
-
-
-
           break;
 
           case BlinkState::OPENING:
-          { // scoped
-            if(top_curr_y <= top_open_y+BLINK_CLOSE_ENOUGH_THRESHOLD || bottom_curr_y >= bottom_open_y-BLINK_CLOSE_ENOUGH_THRESHOLD) {
-              top_curr_y = top_open_y;
-              bottom_curr_y = bottom_open_y;
-              currBlinkingState = BlinkState::OPEN;
-            } else {
-              float this_frame_displacement = frame_delta_time*BLINK_SPEED;
-              top_curr_y -= this_frame_displacement;
-              bottom_curr_y += this_frame_displacement;
+            { // scoped
+              if(top_curr_y <= top_open_y+BLINK_CLOSE_ENOUGH_THRESHOLD || bottom_curr_y >= bottom_open_y-BLINK_CLOSE_ENOUGH_THRESHOLD) {
+                top_curr_y = top_open_y;
+                bottom_curr_y = bottom_open_y;
+                currBlinkingState = BlinkState::OPEN;
+              } else {
+                float this_frame_displacement = frame_delta_time*BLINK_SPEED;
+                top_curr_y -= this_frame_displacement;
+                bottom_curr_y += this_frame_displacement;
+              }
             }
-          }
-
           break;
 
       }
@@ -857,9 +845,9 @@ int main(int argc, char **argv) {
       renderWindow.draw(bottom_eyelid);
     }
 
+
     // mouth
     if(show_mouth) {
-
 
       MouthBezierPoints translated_points = curr_mouth_points.transform(mouth_reference_x, mouth_reference_y, mouth_scaling_x, mouth_scaling_y);
 
@@ -875,7 +863,6 @@ int main(int argc, char **argv) {
       lower_mouth_vertices = translated_points.generateCurve(1);
 
 
-
       renderWindow.draw(generateLineWThickness(upper_mouth_vertices, mouth_colour, MOUTH_THICKNESS));
       renderWindow.draw(generateLineWThickness(lower_mouth_vertices, mouth_colour, MOUTH_THICKNESS));
       mouth_fillet.setPosition(upper_mouth_vertices.front().x, upper_mouth_vertices.front().y);
@@ -887,6 +874,7 @@ int main(int argc, char **argv) {
 
     // eyebrows
     if(show_eybrows) {
+
       // offset for concave shapes
       float offset_x=0.0f;
       if(eyebrowShape==EyebrowShape::RECTANGULAR) {
@@ -920,7 +908,6 @@ int main(int argc, char **argv) {
           nose_annulus.setScale(nose_scaling*0.7f, nose_scaling*0.7f);
           nose_annulus.setFillColor(background_colour);
           renderWindow.draw(nose_annulus);
-
         break;
 
         case BUTTON:
@@ -931,7 +918,6 @@ int main(int argc, char **argv) {
           renderWindow.draw(nose_annulus);
 
         break;
-
 
         case CURVE:
           {
@@ -1011,8 +997,6 @@ int main(int argc, char **argv) {
 
 
     }
-
-
 
 
     renderWindow.display();

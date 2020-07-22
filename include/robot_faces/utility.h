@@ -1,3 +1,6 @@
+#ifndef UTILITY_H
+#define UTILITY_H
+
 /*
 Copyright 2020 Andrew Murtagh
 
@@ -365,3 +368,5 @@ MouthBezierPoints surprise_mouth_bezier_points = {
   .lower_start_control = sf::Vector2f(-40, 80),
   .lower_end_control = sf::Vector2f(40, 80)
 };
+
+#endif // UTILITY_H
