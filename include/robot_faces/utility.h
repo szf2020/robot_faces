@@ -104,6 +104,12 @@ void updateColour(sf::Color& colour, const std::string& new_colour) {
 /*
 data structures
 */
+
+enum LeftOrRight {
+  LEFT,
+  RIGHT
+};
+
 struct MouthBezierPoints {
     sf::Vector2f upper_start, upper_end, upper_start_control, upper_end_control;
     sf::Vector2f lower_start, lower_end, lower_start_control, lower_end_control;

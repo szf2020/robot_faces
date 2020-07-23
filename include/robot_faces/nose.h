@@ -19,21 +19,20 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 class Nose : public Element {
 
   public:
-    // Nose(QString n, QDate df) : Company(n, df) { }
 
     Nose() :
       nose_curve_points_(sf::TrianglesStrip),
       nose_inverted_triangle_points_(sf::TrianglesFan),
       nose_shape_(NoseShape::BUTTON)
     {
-
       nose_annulus_.setRadius(DEFAULT_NOSE_RADIUS);
       nose_annulus_.setOrigin(DEFAULT_NOSE_RADIUS, DEFAULT_NOSE_RADIUS);
-      //
+
       generateNoseCurvePoints();
-      //
+
       generateNoseInvertedTrianglePoints();
     }
+
 
     enum struct NoseShape {
       ANNULUS,
@@ -42,9 +41,8 @@ class Nose : public Element {
       INVERTED_TRIANGLE
     };
 
+
     void draw(sf::RenderWindow& renderWindow, const float frame_delta_time) override {
-
-
 
       if(show_) {
         //TODO background_colour, scale_x_
@@ -103,11 +101,12 @@ class Nose : public Element {
     }
 
     //TODO OVERRIDE BASE CLASSES TO CALL GENERATE NOSE POINTS
-    void setScaleX(const float sx) {
-      Element::setScaleX(sx);
-      generateNoseCurvePoints();
-      generateNoseInvertedTrianglePoints();
-    }
+    //NOTE NO NEED FOR THIS SINCE POINTS ARE RECOMPUTED EVERY FRAME, SHOULD OPTIMISE
+    // void setScaleX(const float sx) {
+    //   Element::setScaleX(sx);
+    //   generateNoseCurvePoints();
+    //   generateNoseInvertedTrianglePoints();
+    // }
 
 
   private:

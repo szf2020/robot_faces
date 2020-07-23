@@ -178,7 +178,13 @@ timeout: 0"
 
 * Speaking.
 
-* Refactor with classes... 
+* Refactor with classes...
+
+* Show mouth bezier points.
+
+* Separate draw reference marker into base class function.
+
+* Set default colour 
 
 ## Ideas
 

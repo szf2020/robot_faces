@@ -28,6 +28,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 #include "robot_faces/nose.h"
 #include "robot_faces/mouth.h"
+#include "robot_faces/eyebrow.h"
 
 /*
 debug variables - internal use by the author
@@ -77,17 +78,14 @@ int avr_blink_interval      = 3000; //ms
 sf::Color background_colour(255,255,255,255);
 sf::Color pupil_colour(0,0,0,255);
 sf::Color iris_colour(139,69,19,255);
-sf::Color eyebrow_colour(34,27,7,255);
 
 // display toggles
-bool show_eybrows           = true;
 bool show_iris              = true;
 bool show_pupil             = true;
 
 // scaling
 float eye_scaling_x         = 1.0f;
 float eye_scaling_y         = 1.0f;
-float eyebrow_scaling       = 1.0f;
 
 enum struct IrisShape {
   ROUNDED_RECTANGLE,
@@ -96,15 +94,6 @@ enum struct IrisShape {
   ALMOND,
   ARC
 } irisShape                 = IrisShape::ROUNDED_RECTANGLE;
-
-enum struct EyebrowShape {
-  CIRCULAR_ARC,
-  RECTANGULAR,
-  SQUARE,
-  ROUNDED,
-  STRAIGHT,
-  HIGH_ARCH
-} eyebrowShape              = EyebrowShape::CIRCULAR_ARC;
 
 
 
@@ -125,7 +114,10 @@ sf::VertexArray iris_points(sf::TrianglesFan);
 sf::Vector2f curr_iris_offset; // relative to the reference point in px, no need for a goal. The iris just trails the pupil goal position
 
 // eyebrows
-sf::VertexArray eyebrow_points(sf::TrianglesFan);
+// sf::VertexArray eyebrow_points(sf::TrianglesFan);
+
+Eyebrow left_eyebrow(LEFT);
+Eyebrow right_eyebrow(RIGHT);
 
 // mouth
 Mouth mouth;
@@ -222,73 +214,6 @@ void generateIrisPoints() {
 }
 
 
-void generateEyebrowPoints() {
-
-  std::string filename = "eyebrow_arc";
-
-  switch (eyebrowShape) {
-    case EyebrowShape::CIRCULAR_ARC:
-    default:
-      filename="eyebrow_arc";
-    break;
-
-    case EyebrowShape::RECTANGULAR:
-      filename="eyebrow_rectangular";
-    break;
-
-    case EyebrowShape::SQUARE:
-      filename="eyebrow_square";
-    break;
-
-    case EyebrowShape::ROUNDED:
-      filename="eyebrow_rounded";
-    break;
-
-    case EyebrowShape::STRAIGHT:
-      filename="eyebrow_straight";
-    break;
-
-    case EyebrowShape::HIGH_ARCH:
-      filename="eyebrow_high_arch";
-    break;
-
-  }
-
-
-  eyebrow_points.clear();
-  sf::Vector2f initial_position{0, 0}; //TODO REMOVE
-  std::string package_path = ros::package::getPath("robot_faces");
-
-  std::ifstream file(package_path+"/res/"+filename+".txt", std::ifstream::in);
-
-  std::string line, x, y;
-  if(!getline(file, line)) {
-    ROS_ERROR("Could not open file");
-  }
-  std::stringstream liness(line);
-
-  eyebrow_points.append(sf::Vertex(sf::Vector2f(initial_position.x, initial_position.y), eyebrow_colour));
-
-  while (getline(file, line)) {
-      std::stringstream liness(line);
-      getline(liness, x, ',');
-      getline(liness, y);
-
-
-      float x_point = strtof(x.c_str(),0);
-      float y_point = strtof(y.c_str(),0);
-
-
-      x_point = (float) initial_position.x + eyebrow_scaling*x_point;
-      y_point = (float) initial_position.y + eyebrow_scaling*y_point;
-      eyebrow_points.append(sf::Vertex(sf::Vector2f(x_point, y_point), eyebrow_colour));
-  }
-  file.close();
-
-}
-
-
-
 /*
 callback functions
 */
@@ -306,7 +231,8 @@ void dynamicReconfigureCb(robot_faces::ParametersConfig& config, uint32_t level)
 
   nose.setShape(static_cast<Nose::NoseShape>(config.nose_shape));
 
-  eyebrowShape = static_cast<EyebrowShape>(config.eyebrow_shape);
+  left_eyebrow.setShape(static_cast<Eyebrow::EyebrowShape>(config.eyebrow_shape));
+  right_eyebrow.setShape(static_cast<Eyebrow::EyebrowShape>(config.eyebrow_shape));
 
   pupil_corner_radius = config.pupil_corner_radius;
   pupil_shape.setCornersRadius(pupil_corner_radius*DEFAULT_PUPIL_DIAMETER/2.0f);
@@ -329,9 +255,10 @@ void dynamicReconfigureCb(robot_faces::ParametersConfig& config, uint32_t level)
 
   nose.setPosition(int(0.5f*g_window_width), int(nose_height*g_window_height));
 
-
-
   mouth.setPosition(int(0.5f*g_window_width), int(mouth_height*g_window_height));
+
+  left_eyebrow.setPosition(int(0.5f*(g_window_width-eye_spacing*g_window_width)), int(eye_height*g_window_height-eyebrow_spacing*g_window_height));
+  right_eyebrow.setPosition(int(g_window_width-0.5f*(g_window_width-eye_spacing*g_window_width)), int(eye_height*g_window_height-eyebrow_spacing*g_window_height));
 
 
 
@@ -342,7 +269,9 @@ void dynamicReconfigureCb(robot_faces::ParametersConfig& config, uint32_t level)
 
   nose.setColour(config.nose_colour);
 
-  updateColour(eyebrow_colour, config.eyebrow_colour);
+  // updateColour(eyebrow_colour, config.eyebrow_colour);
+  left_eyebrow.setColour(config.eyebrow_colour);
+  right_eyebrow.setColour(config.eyebrow_colour);
 
   updateColour(iris_colour, config.iris_colour);
   iris_shape.setFillColor(iris_colour);
@@ -353,26 +282,30 @@ void dynamicReconfigureCb(robot_faces::ParametersConfig& config, uint32_t level)
   mouth.setColour(config.mouth_colour);
 
   // display toggles
-  show_eybrows = config.show_eybrows;
   show_iris = config.show_iris;
   show_pupil = config.show_pupil;
   nose.setShow(config.show_nose);
 
   mouth.setShow(config.show_mouth);
 
+  left_eyebrow.setShow(config.show_eybrows);
+  right_eyebrow.setShow(config.show_eybrows);
+
   // scaling
   nose.setScaleX(config.nose_scaling);
 
   eye_scaling_x = config.eye_scaling_x;
   eye_scaling_y = config.eye_scaling_y;
-  eyebrow_scaling = config.eyebrow_scaling;
+
+  left_eyebrow.setScaleX(config.eyebrow_scaling);
+  right_eyebrow.setScaleX(config.eyebrow_scaling);
 
   mouth.setScaleX(config.mouth_scaling_x);
   mouth.setScaleY(config.mouth_scaling_y);
 
+
   // recompute vertexarray points
   generateIrisPoints();
-  generateEyebrowPoints();
 }
 
 
@@ -388,39 +321,30 @@ bool setExpressionCb(robot_faces::Expression::Request& req, robot_faces::Express
   std::transform(expr.begin(), expr.end(), expr.begin(), [](unsigned char c){ return std::toupper(c); });
 
   if(expr == "NEUTRAL") {
-    // goal_mouth_points = neutral_mouth_bezier_points;
     mouth.setGoalPoints(neutral_mouth_bezier_points);
 
   } else if(expr == "SADNESS") {
-    // goal_mouth_points = sadness_mouth_bezier_points;
     mouth.setGoalPoints(sadness_mouth_bezier_points);
 
   } else if(expr == "FEAR") {
-    // goal_mouth_points = fear_mouth_bezier_points;
     mouth.setGoalPoints(fear_mouth_bezier_points);
 
   } else if(expr == "DISGUST") {
-    // goal_mouth_points = disgust_mouth_bezier_points;
     mouth.setGoalPoints(disgust_mouth_bezier_points);
 
   } else if(expr == "ANGER") {
-    // goal_mouth_points = anger_mouth_bezier_points;
     mouth.setGoalPoints(anger_mouth_bezier_points);
 
   } else if(expr == "JOY") {
-    // goal_mouth_points = joy_mouth_bezier_points;
     mouth.setGoalPoints(joy_mouth_bezier_points);
 
   } else if(expr == "HAPPINESS") {
-    // goal_mouth_points = happiness_mouth_bezier_points;
     mouth.setGoalPoints(happiness_mouth_bezier_points);
 
   } else if(expr == "AWE") {
-    // goal_mouth_points = awe_mouth_bezier_points;
     mouth.setGoalPoints(awe_mouth_bezier_points);
 
   } else if(expr == "SURPRISE") {
-    // goal_mouth_points = surprise_mouth_bezier_points;
     mouth.setGoalPoints(surprise_mouth_bezier_points);
 
   } else {
@@ -530,6 +454,11 @@ int main(int argc, char **argv) {
 
   mouth.setPosition(int(0.5f*g_window_width), int(mouth_height*g_window_height));
 
+  left_eyebrow.setPosition(int(0.5f*(g_window_width-eye_spacing*g_window_width)), int(eye_height*g_window_height-eyebrow_spacing*g_window_height));
+  right_eyebrow.setPosition(int(g_window_width-0.5f*(g_window_width-eye_spacing*g_window_width)), int(eye_height*g_window_height-eyebrow_spacing*g_window_height));
+
+
+
 
   // pupil
   pupil_shape.setSize(sf::Vector2f(DEFAULT_PUPIL_DIAMETER, DEFAULT_PUPIL_DIAMETER));
@@ -560,7 +489,7 @@ int main(int argc, char **argv) {
 
 
   // eyebrows
-  generateEyebrowPoints();
+
 
 
   // eyelids
@@ -579,9 +508,6 @@ int main(int argc, char **argv) {
   reference_marker.setFillColor(REFERENCE_MARKER_COLOUR);
 
 
-  bezier_marker.setRadius(REFERENCE_MARKER_RADIUS);
-  bezier_marker.setOrigin(REFERENCE_MARKER_RADIUS, REFERENCE_MARKER_RADIUS);
-  bezier_marker.setFillColor(BEZIER_MARKER_COLOUR);
 
 
 
@@ -648,7 +574,7 @@ int main(int argc, char **argv) {
     int eye_reference_y = int(eye_height*g_window_height);
 
 
-    int eyebrow_reference_y = int(eye_height*g_window_height-eyebrow_spacing*g_window_height);
+    // int eyebrow_reference_y = int(eye_height*g_window_height-eyebrow_spacing*g_window_height);
 
 
     renderWindow.clear(background_colour);
@@ -772,35 +698,16 @@ int main(int argc, char **argv) {
 
 
     // eyebrows
-    if(show_eybrows) {
-
-      // offset for concave shapes
-      float offset_x=0.0f;
-      if(eyebrowShape==EyebrowShape::RECTANGULAR) {
-        offset_x=90.0f;
-      }
-
-      sf::Transform t(1.f, 0.f, left_eye_reference_x+offset_x,
-                       0.f,  1.0f, eyebrow_reference_y,
-                       0.f,  0.f, 1.f);
-      renderWindow.draw(eyebrow_points, t);
-
-      t = sf::Transform(-1.f, 0.f, right_eye_reference_x-offset_x,
-                       0.f,  1.0f, eyebrow_reference_y,
-                       0.f,  0.f, 1.f);
-
-      renderWindow.draw(eyebrow_points, t);
-    }
+    left_eyebrow.draw(renderWindow, frame_delta_time);
+    right_eyebrow.draw(renderWindow, frame_delta_time);
 
 
-    //mouth
+    // mouth
     mouth.draw(renderWindow, frame_delta_time);
 
 
     // nose
     nose.draw(renderWindow, frame_delta_time);
-
-
 
 
     //debug markers
@@ -814,13 +721,6 @@ int main(int argc, char **argv) {
       reference_marker.setPosition(right_eye_reference_x, eye_reference_y);
       renderWindow.draw(reference_marker);
 
-      // left eyebrow reference mark
-      reference_marker.setPosition(left_eye_reference_x, eyebrow_reference_y);
-      renderWindow.draw(reference_marker);
-
-      // right eyebrow reference mark
-      reference_marker.setPosition(right_eye_reference_x, eyebrow_reference_y);
-      renderWindow.draw(reference_marker);
 
     }
 
