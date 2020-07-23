@@ -77,7 +77,6 @@ int avr_blink_interval      = 3000; //ms
 
 // colours
 sf::Color background_colour(255,255,255,255);
-// sf::Color nose_colour(41,41,41,255);
 sf::Color pupil_colour(0,0,0,255);
 sf::Color iris_colour(139,69,19,255);
 sf::Color eyebrow_colour(34,27,7,255);
@@ -87,23 +86,14 @@ sf::Color mouth_colour(0,0,0,255);
 bool show_eybrows           = true;
 bool show_iris              = true;
 bool show_pupil             = true;
-// bool show_nose              = false;
 bool show_mouth             = true;
 
 // scaling
-// float nose_scaling          = 1.0f;
 float eye_scaling_x         = 1.0f;
 float eye_scaling_y         = 1.0f;
 float eyebrow_scaling       = 1.0f;
 float mouth_scaling_x       = 1.0f;
 float mouth_scaling_y       = 1.0f;
-
-// enum NoseShape {
-//   ANNULUS,
-//   BUTTON,
-//   CURVE,
-//   INVERTED_TRIANGLE
-// } noseShape                 = BUTTON;
 
 enum struct IrisShape {
   ROUNDED_RECTANGLE,
@@ -130,11 +120,6 @@ sf elements
 
 Nose nose;
 
-// nose
-// sf::CircleShape nose_annulus, left_nose_curve_fillet, right_nose_curve_fillet;
-// sf::VertexArray nose_curve_points(sf::TrianglesStrip);
-// sf::VertexArray nose_inverted_triangle_points(sf::TrianglesFan);
-
 // pupil
 sf::RoundedRectangle pupil_shape, pupil_highlight;
 int gaze_offset_x, gaze_offset_y, saccade_offset_x, saccade_offset_y;
@@ -151,10 +136,7 @@ sf::VertexArray eyebrow_points(sf::TrianglesFan);
 // mouth
 std::vector<sf::Vector2f> upper_mouth_vertices, lower_mouth_vertices;
 sf::CircleShape mouth_fillet;
-
-
 MouthBezierPoints goal_mouth_points, curr_mouth_points;
-
 
 // eyelids
 sf::RectangleShape top_eyelid, bottom_eyelid;
@@ -247,78 +229,7 @@ void generateIrisPoints() {
 
 }
 
-/*
-void generateNoseInvertedTrianglePoints() {
 
-  nose_inverted_triangle_points.clear();
-
-  sf::Vector2f initial_position{0, 0}; //TODO REMOVE
-  std::string package_path = ros::package::getPath("robot_faces");
-
-  std::ifstream file(package_path+"/res/inverted_triangle_nose.txt", std::ifstream::in);
-  std::string line, x, y;
-  if(!getline(file, line)) {
-    ROS_ERROR("Could not open file");
-  }
-  std::stringstream liness(line);
-
-  nose_inverted_triangle_points.append(sf::Vertex(sf::Vector2f(initial_position.x, initial_position.y), nose_colour));
-
-  while (getline(file, line)) {
-      std::stringstream liness(line);
-      getline(liness, x, ',');
-      getline(liness, y);
-
-      // needs to be scaled
-      float x_point = strtof(x.c_str(),0)*5.0f*nose_scaling;
-      float y_point = strtof(y.c_str(),0)*5.0f*nose_scaling;
-
-      x_point = (float) initial_position.x + x_point;
-      y_point = (float) initial_position.y + y_point;
-      nose_inverted_triangle_points.append(sf::Vertex(sf::Vector2f(x_point, y_point), nose_colour));
-  }
-  file.close();
-
-}
-
-void generateNoseCurvePoints() {
-
-  nose_curve_points.clear();
-
-  float thickness = nose_scaling*DEFAULT_NOSE_CURVE_THICKNESS;
-  float radius = nose_scaling*DEFAULT_NOSE_RADIUS;
-  sf::Vector2f initial_position{0, -radius/2.0f};
-
-  sf::Vector2f prev_vector = sf::Vector2f(initial_position.x+radius*sin(degToRad(-30)), initial_position.y+radius*cos(degToRad(-30)));
-  sf::Vector2f curr_vector = sf::Vector2f(initial_position.x+radius*sin(degToRad(-29)), initial_position.y+radius*cos(degToRad(-29)));
-
-
-  for(int ang=-29; ang<=30; ang+=1) {
-
-    curr_vector = sf::Vector2f(initial_position.x+radius*sin(degToRad(ang)), initial_position.y+radius*cos(degToRad(ang)));
-
-    sf::Vector2f line = prev_vector - curr_vector;
-    sf::Vector2f normal = normalize(sf::Vector2f(-line.y, line.x));
-
-    nose_curve_points.append(sf::Vertex(prev_vector - thickness * normal, nose_colour));
-    nose_curve_points.append(sf::Vertex(prev_vector + thickness * normal, nose_colour));
-
-    nose_curve_points.append(sf::Vertex(curr_vector - thickness * normal, nose_colour));
-    nose_curve_points.append(sf::Vertex(curr_vector + thickness * normal, nose_colour));
-
-    prev_vector = curr_vector;
-  }
-
-
-	left_nose_curve_fillet.setRadius(thickness);
-	left_nose_curve_fillet.setOrigin(thickness, thickness);
-	left_nose_curve_fillet.setPosition(initial_position.x+radius*sin(degToRad(-30)), initial_position.y+radius*cos(degToRad(-30)));
-	right_nose_curve_fillet.setRadius(thickness);
-	right_nose_curve_fillet.setOrigin(thickness, thickness);
-	right_nose_curve_fillet.setPosition(initial_position.x+radius*sin(degToRad(30)), initial_position.y+radius*cos(degToRad(30)));
-}
-
-*/
 void generateEyebrowPoints() {
 
   std::string filename = "eyebrow_arc";
@@ -401,7 +312,6 @@ void dynamicReconfigureCb(robot_faces::ParametersConfig& config, uint32_t level)
 
   irisShape = static_cast<IrisShape>(config.iris_shape);
 
-  // noseShape = static_cast<NoseShape>(config.nose_shape);
   nose.setShape(static_cast<Nose::NoseShape>(config.nose_shape));
 
   eyebrowShape = static_cast<EyebrowShape>(config.eyebrow_shape);
@@ -425,6 +335,9 @@ void dynamicReconfigureCb(robot_faces::ParametersConfig& config, uint32_t level)
   nose_height = config.nose_height;
   mouth_height = config.mouth_height;
 
+  nose.setPosition(int(0.5f*g_window_width), int(nose_height*g_window_height));
+
+
 
   // colours
   updateColour(background_colour, config.background_colour);
@@ -432,10 +345,6 @@ void dynamicReconfigureCb(robot_faces::ParametersConfig& config, uint32_t level)
   bottom_eyelid.setFillColor(background_colour);
 
   nose.setColour(config.nose_colour);
-  // updateColour(nose_colour, config.nose_colour);
-  // nose_annulus.setFillColor(nose_colour);
-  // left_nose_curve_fillet.setFillColor(nose_colour);
-  // right_nose_curve_fillet.setFillColor(nose_colour);
 
   updateColour(eyebrow_colour, config.eyebrow_colour);
 
@@ -458,7 +367,6 @@ void dynamicReconfigureCb(robot_faces::ParametersConfig& config, uint32_t level)
   show_mouth = config.show_mouth;
 
   // scaling
-  // nose_scaling = config.nose_scaling;
   nose.setScaleX(config.nose_scaling);
 
   eye_scaling_x = config.eye_scaling_x;
@@ -468,10 +376,6 @@ void dynamicReconfigureCb(robot_faces::ParametersConfig& config, uint32_t level)
   mouth_scaling_y = config.mouth_scaling_y;
 
   // recompute vertexarray points
-  /*
-  generateNoseCurvePoints();
-  generateNoseInvertedTrianglePoints();
-  */
   generateIrisPoints();
   generateEyebrowPoints();
 }
@@ -616,17 +520,8 @@ int main(int argc, char **argv) {
   init sf elements
   */
 
-  nose.setReferenceX(0.5*g_window_width);
-  nose.setReferenceY(0.5*g_window_height);
   // nose
-  /*
-  nose_annulus.setRadius(DEFAULT_NOSE_RADIUS);
-  nose_annulus.setOrigin(DEFAULT_NOSE_RADIUS, DEFAULT_NOSE_RADIUS);
-
-  generateNoseCurvePoints();
-
-  generateNoseInvertedTrianglePoints();
-  */
+  nose.setPosition(int(0.5f*g_window_width), int(nose_height*g_window_height));
 
 
   // pupil
@@ -753,8 +648,6 @@ int main(int argc, char **argv) {
     int right_eye_reference_x = int(g_window_width-0.5f*(g_window_width-eye_spacing*g_window_width));
     int eye_reference_y = int(eye_height*g_window_height);
 
-    int nose_reference_x = int(0.5f*g_window_width);
-    int nose_reference_y = int(nose_height*g_window_height);
 
     int eyebrow_reference_y = int(eye_height*g_window_height-eyebrow_spacing*g_window_height);
 
@@ -939,53 +832,7 @@ int main(int argc, char **argv) {
     }
 
     nose.draw(renderWindow);
-    /*
-    // nose
-    if(show_nose) {
 
-      switch(noseShape) {
-
-        case ANNULUS:
-          nose_annulus.setPosition(nose_reference_x, nose_reference_y);
-          nose_annulus.setScale(nose_scaling, nose_scaling);
-          nose_annulus.setFillColor(nose_colour);
-          renderWindow.draw(nose_annulus);
-
-          nose_annulus.setScale(nose_scaling*0.7f, nose_scaling*0.7f);
-          nose_annulus.setFillColor(background_colour);
-          renderWindow.draw(nose_annulus);
-        break;
-
-        case BUTTON:
-        default:
-          nose_annulus.setPosition(nose_reference_x, nose_reference_y);
-          nose_annulus.setFillColor(nose_colour);
-          nose_annulus.setScale(nose_scaling, nose_scaling);
-          renderWindow.draw(nose_annulus);
-
-        break;
-
-        case CURVE:
-          {
-            //TODO CHANGE SCALING TO HERE USING CUSTOM TRANSFORMATION MATRIX
-            sf::Transform t;
-            t.translate(nose_reference_x, nose_reference_y);
-            renderWindow.draw(nose_curve_points, t);
-            renderWindow.draw(left_nose_curve_fillet, t);
-            renderWindow.draw(right_nose_curve_fillet, t);
-          }
-        break;
-
-        case INVERTED_TRIANGLE:
-          //TODO CHANGE SCALING TO HERE USING CUSTOM TRANSFORMATION MATRIX
-          sf::Transform t;
-          t.translate(nose_reference_x, nose_reference_y);
-          renderWindow.draw(nose_inverted_triangle_points, t);
-        break;
-      }
-
-    }
-    */
 
 
     //debug markers
@@ -1006,12 +853,6 @@ int main(int argc, char **argv) {
       // right eyebrow reference mark
       reference_marker.setPosition(right_eye_reference_x, eyebrow_reference_y);
       renderWindow.draw(reference_marker);
-
-      // nose reference mark
-      /*
-      reference_marker.setPosition(nose_reference_x, nose_reference_y);
-      renderWindow.draw(reference_marker);
-      */
 
       // mouth reference mark
       reference_marker.setPosition(mouth_reference_x, mouth_reference_y);

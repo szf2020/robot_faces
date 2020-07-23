@@ -44,60 +44,59 @@ class Nose : public Element {
 
     void draw(sf::RenderWindow& renderWindow) override {
 
-      //TODO ONLY IF DEBUG IS SET
-      reference_marker_.setPosition(reference_x_, reference_y_);
-      renderWindow.draw(reference_marker_);
 
 
-      if(!show_) return;
+      if(show_) {
+        //TODO background_colour, scale_x_
+        sf::Color background_colour = sf::Color(255,255,255,255);
 
+        switch(nose_shape_) {
 
+          case NoseShape::ANNULUS:
+            nose_annulus_.setPosition(reference_x_, reference_y_);
+            nose_annulus_.setScale(scale_x_, scale_x_);
+            nose_annulus_.setFillColor(colour_);
+            renderWindow.draw(nose_annulus_);
 
-      //TODO background_colour, scale_x_
-      sf::Color background_colour = sf::Color(255,255,255,255);
+            nose_annulus_.setScale(scale_x_*0.7f, scale_x_*0.7f);
+            nose_annulus_.setFillColor(background_colour);
+            renderWindow.draw(nose_annulus_);
+          break;
 
-      switch(nose_shape_) {
+          case NoseShape::BUTTON:
+          default:
+            nose_annulus_.setPosition(reference_x_, reference_y_);
+            nose_annulus_.setFillColor(colour_);
+            nose_annulus_.setScale(scale_x_, scale_x_);
+            renderWindow.draw(nose_annulus_);
 
-        case NoseShape::ANNULUS:
-          nose_annulus_.setPosition(reference_x_, reference_y_);
-          nose_annulus_.setScale(scale_x_, scale_x_);
-          nose_annulus_.setFillColor(colour_);
-          renderWindow.draw(nose_annulus_);
+          break;
 
-          nose_annulus_.setScale(scale_x_*0.7f, scale_x_*0.7f);
-          nose_annulus_.setFillColor(background_colour);
-          renderWindow.draw(nose_annulus_);
-        break;
+          case NoseShape::CURVE:
+            {
+              //TODO CHANGE SCALING TO HERE USING CUSTOM TRANSFORMATION MATRIX
+              sf::Transform t;
+              t.translate(reference_x_, reference_y_);
+              renderWindow.draw(nose_curve_points_, t);
+              renderWindow.draw(left_nose_curve_fillet_, t);
+              renderWindow.draw(right_nose_curve_fillet_, t);
+            }
+          break;
 
-        case NoseShape::BUTTON:
-        default:
-          nose_annulus_.setPosition(reference_x_, reference_y_);
-          nose_annulus_.setFillColor(colour_);
-          nose_annulus_.setScale(scale_x_, scale_x_);
-          renderWindow.draw(nose_annulus_);
-
-        break;
-
-        case NoseShape::CURVE:
-          {
+          case NoseShape::INVERTED_TRIANGLE:
             //TODO CHANGE SCALING TO HERE USING CUSTOM TRANSFORMATION MATRIX
             sf::Transform t;
             t.translate(reference_x_, reference_y_);
-            renderWindow.draw(nose_curve_points_, t);
-            renderWindow.draw(left_nose_curve_fillet_, t);
-            renderWindow.draw(right_nose_curve_fillet_, t);
-          }
-        break;
-
-        case NoseShape::INVERTED_TRIANGLE:
-          //TODO CHANGE SCALING TO HERE USING CUSTOM TRANSFORMATION MATRIX
-          sf::Transform t;
-          t.translate(reference_x_, reference_y_);
-          renderWindow.draw(nose_inverted_triangle_points_, t);
-        break;
+            renderWindow.draw(nose_inverted_triangle_points_, t);
+          break;
+        }
       }
 
+      //TODO ONLY IF DEBUG IS SET
+      reference_marker_.setPosition(reference_x_, reference_y_);
+      renderWindow.draw(reference_marker_);
     }
+
 
     void setShape(const NoseShape ns) {
       nose_shape_ = ns;

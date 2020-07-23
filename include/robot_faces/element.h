@@ -31,6 +31,7 @@ class Element {
       REFERENCE_MARKER_COLOUR_(0, 0, 255, 255)
     {
 
+      //TODO SET TO DEFAULT COLOUR
       reference_marker_.setRadius(REFERENCE_MARKER_RADIUS_);
       reference_marker_.setOrigin(REFERENCE_MARKER_RADIUS_, REFERENCE_MARKER_RADIUS_);
       reference_marker_.setFillColor(REFERENCE_MARKER_COLOUR_);
@@ -59,6 +60,12 @@ class Element {
 
     void setReferenceY(const int y) {
       //TODO BOUNDS CHECKING
+      reference_y_ = y;
+    }
+
+    void setPosition(const int x, const int y) {
+      //TODO BOUNDS CHECKING
+      reference_x_ = x;
       reference_y_ = y;
     }
 
