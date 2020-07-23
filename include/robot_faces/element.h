@@ -37,7 +37,7 @@ class Element {
       reference_marker_.setFillColor(REFERENCE_MARKER_COLOUR_);
     }
 
-    virtual void draw(sf::RenderWindow&) = 0;
+    virtual void draw(sf::RenderWindow&, const float) = 0;
 
     void setScaleX(const float sx) {
       //TODO BOUNDS CHECKING
@@ -69,7 +69,7 @@ class Element {
       reference_y_ = y;
     }
 
-    void setColour(const std::string & c) {
+    void setColour(const std::string& c) {
       // TODO CHECKING VALIDITY
       // colour_ = c;
       if(std::regex_match(c, rgba_regex)) {

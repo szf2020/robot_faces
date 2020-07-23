@@ -27,6 +27,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #include "robot_faces/roundedrectangle.h"
 
 #include "robot_faces/nose.h"
+#include "robot_faces/mouth.h"
 
 /*
 debug variables - internal use by the author
@@ -43,11 +44,8 @@ int g_window_height = 600;
 
 
 //TODO a better way of initialising these?
-// const float DEFAULT_NOSE_CURVE_THICKNESS=5.0f;
-// const int DEFAULT_NOSE_RADIUS = int(g_window_width/15.0f);
 const int DEFAULT_PUPIL_DIAMETER = int(g_window_width/15.0f);
 const int DEFAULT_IRIS_DIAMETER = int(g_window_width/7.0f);
-const int MOUTH_THICKNESS = 8.0f; //note this is actually half the thickness, make a parameter
 const float CLOSE_ENOUGH_THRESHOLD = 3.0f; // in px
 const float BLINK_CLOSE_ENOUGH_THRESHOLD = 6.0f; // in px - more leeway is given to blinking because it moves much faster
 const float SACCADE_SPEED = 90.0f; // px per second
@@ -80,20 +78,16 @@ sf::Color background_colour(255,255,255,255);
 sf::Color pupil_colour(0,0,0,255);
 sf::Color iris_colour(139,69,19,255);
 sf::Color eyebrow_colour(34,27,7,255);
-sf::Color mouth_colour(0,0,0,255);
 
 // display toggles
 bool show_eybrows           = true;
 bool show_iris              = true;
 bool show_pupil             = true;
-bool show_mouth             = true;
 
 // scaling
 float eye_scaling_x         = 1.0f;
 float eye_scaling_y         = 1.0f;
 float eyebrow_scaling       = 1.0f;
-float mouth_scaling_x       = 1.0f;
-float mouth_scaling_y       = 1.0f;
 
 enum struct IrisShape {
   ROUNDED_RECTANGLE,
@@ -134,9 +128,7 @@ sf::Vector2f curr_iris_offset; // relative to the reference point in px, no need
 sf::VertexArray eyebrow_points(sf::TrianglesFan);
 
 // mouth
-std::vector<sf::Vector2f> upper_mouth_vertices, lower_mouth_vertices;
-sf::CircleShape mouth_fillet;
-MouthBezierPoints goal_mouth_points, curr_mouth_points;
+Mouth mouth;
 
 // eyelids
 sf::RectangleShape top_eyelid, bottom_eyelid;
@@ -339,6 +331,10 @@ void dynamicReconfigureCb(robot_faces::ParametersConfig& config, uint32_t level)
 
 
 
+  mouth.setPosition(int(0.5f*g_window_width), int(mouth_height*g_window_height));
+
+
+
   // colours
   updateColour(background_colour, config.background_colour);
   top_eyelid.setFillColor(background_colour);
@@ -354,17 +350,15 @@ void dynamicReconfigureCb(robot_faces::ParametersConfig& config, uint32_t level)
   updateColour(pupil_colour, config.pupil_colour);
   pupil_shape.setFillColor(pupil_colour);
 
-  updateColour(mouth_colour, config.mouth_colour);
-  mouth_fillet.setFillColor(mouth_colour);
+  mouth.setColour(config.mouth_colour);
 
   // display toggles
   show_eybrows = config.show_eybrows;
   show_iris = config.show_iris;
   show_pupil = config.show_pupil;
-  // show_nose = config.show_nose;
   nose.setShow(config.show_nose);
 
-  show_mouth = config.show_mouth;
+  mouth.setShow(config.show_mouth);
 
   // scaling
   nose.setScaleX(config.nose_scaling);
@@ -372,8 +366,9 @@ void dynamicReconfigureCb(robot_faces::ParametersConfig& config, uint32_t level)
   eye_scaling_x = config.eye_scaling_x;
   eye_scaling_y = config.eye_scaling_y;
   eyebrow_scaling = config.eyebrow_scaling;
-  mouth_scaling_x = config.mouth_scaling_x;
-  mouth_scaling_y = config.mouth_scaling_y;
+
+  mouth.setScaleX(config.mouth_scaling_x);
+  mouth.setScaleY(config.mouth_scaling_y);
 
   // recompute vertexarray points
   generateIrisPoints();
@@ -393,31 +388,40 @@ bool setExpressionCb(robot_faces::Expression::Request& req, robot_faces::Express
   std::transform(expr.begin(), expr.end(), expr.begin(), [](unsigned char c){ return std::toupper(c); });
 
   if(expr == "NEUTRAL") {
-    goal_mouth_points = neutral_mouth_bezier_points;
+    // goal_mouth_points = neutral_mouth_bezier_points;
+    mouth.setGoalPoints(neutral_mouth_bezier_points);
 
   } else if(expr == "SADNESS") {
-    goal_mouth_points = sadness_mouth_bezier_points;
+    // goal_mouth_points = sadness_mouth_bezier_points;
+    mouth.setGoalPoints(sadness_mouth_bezier_points);
 
   } else if(expr == "FEAR") {
-    goal_mouth_points = fear_mouth_bezier_points;
+    // goal_mouth_points = fear_mouth_bezier_points;
+    mouth.setGoalPoints(fear_mouth_bezier_points);
 
   } else if(expr == "DISGUST") {
-    goal_mouth_points = disgust_mouth_bezier_points;
+    // goal_mouth_points = disgust_mouth_bezier_points;
+    mouth.setGoalPoints(disgust_mouth_bezier_points);
 
   } else if(expr == "ANGER") {
-    goal_mouth_points = anger_mouth_bezier_points;
+    // goal_mouth_points = anger_mouth_bezier_points;
+    mouth.setGoalPoints(anger_mouth_bezier_points);
 
   } else if(expr == "JOY") {
-    goal_mouth_points = joy_mouth_bezier_points;
+    // goal_mouth_points = joy_mouth_bezier_points;
+    mouth.setGoalPoints(joy_mouth_bezier_points);
 
   } else if(expr == "HAPPINESS") {
-    goal_mouth_points = happiness_mouth_bezier_points;
+    // goal_mouth_points = happiness_mouth_bezier_points;
+    mouth.setGoalPoints(happiness_mouth_bezier_points);
 
   } else if(expr == "AWE") {
-    goal_mouth_points = awe_mouth_bezier_points;
+    // goal_mouth_points = awe_mouth_bezier_points;
+    mouth.setGoalPoints(awe_mouth_bezier_points);
 
   } else if(expr == "SURPRISE") {
-    goal_mouth_points = surprise_mouth_bezier_points;
+    // goal_mouth_points = surprise_mouth_bezier_points;
+    mouth.setGoalPoints(surprise_mouth_bezier_points);
 
   } else {
     ROS_ERROR("Expression not recognised");
@@ -524,6 +528,9 @@ int main(int argc, char **argv) {
   nose.setPosition(int(0.5f*g_window_width), int(nose_height*g_window_height));
 
 
+  mouth.setPosition(int(0.5f*g_window_width), int(mouth_height*g_window_height));
+
+
   // pupil
   pupil_shape.setSize(sf::Vector2f(DEFAULT_PUPIL_DIAMETER, DEFAULT_PUPIL_DIAMETER));
   pupil_shape.setOrigin(DEFAULT_PUPIL_DIAMETER/2.0f, DEFAULT_PUPIL_DIAMETER/2.0f);
@@ -554,14 +561,6 @@ int main(int argc, char **argv) {
 
   // eyebrows
   generateEyebrowPoints();
-
-
-  // mouth
-  mouth_fillet.setRadius(MOUTH_THICKNESS);
-  mouth_fillet.setFillColor(mouth_colour);
-  mouth_fillet.setOrigin(MOUTH_THICKNESS, MOUTH_THICKNESS);
-
-  goal_mouth_points = neutral_mouth_bezier_points, curr_mouth_points = goal_mouth_points;
 
 
   // eyelids
@@ -651,8 +650,6 @@ int main(int argc, char **argv) {
 
     int eyebrow_reference_y = int(eye_height*g_window_height-eyebrow_spacing*g_window_height);
 
-    int mouth_reference_x = int(0.5f*g_window_width);
-    int mouth_reference_y = int(mouth_height*g_window_height);
 
     renderWindow.clear(background_colour);
 
@@ -676,16 +673,6 @@ int main(int argc, char **argv) {
       sf::Vector2f pupil_direction = normalize(goal_pupil_offset - curr_pupil_offset);
       curr_pupil_offset += frame_delta_time*SACCADE_SPEED*pupil_direction;
       curr_iris_offset += frame_delta_time*SACCADE_SPEED*pupil_direction*0.6f;
-    }
-
-
-    if(show_mouth) {
-      if(curr_mouth_points.closeEnough(goal_mouth_points, CLOSE_ENOUGH_THRESHOLD)) {
-        curr_mouth_points = goal_mouth_points;
-      } else {
-        curr_mouth_points.moveTowards(goal_mouth_points, frame_delta_time, EXPRESSION_SPEED);
-      }
-
     }
 
 
@@ -784,32 +771,6 @@ int main(int argc, char **argv) {
     }
 
 
-    // mouth
-    if(show_mouth) {
-
-      MouthBezierPoints translated_points = curr_mouth_points.transform(mouth_reference_x, mouth_reference_y, mouth_scaling_x, mouth_scaling_y);
-
-      //NOTE THIS IS DONE EVERY FRAME, SHOULD FIND A WAY TO OPTIMISE
-      // upper_mouth_vertices = computeBezierCurve(translated_points.upper_start, translated_points.upper_end,
-          // translated_points.upper_start_control, translated_points.upper_end_control);
-
-      // lower_mouth_vertices = computeBezierCurve(translated_points.lower_start, translated_points.lower_end,
-          // translated_points.lower_start_control, translated_points.lower_end_control);
-
-
-      upper_mouth_vertices = translated_points.generateCurve(0);
-      lower_mouth_vertices = translated_points.generateCurve(1);
-
-
-      renderWindow.draw(generateLineWThickness(upper_mouth_vertices, mouth_colour, MOUTH_THICKNESS));
-      renderWindow.draw(generateLineWThickness(lower_mouth_vertices, mouth_colour, MOUTH_THICKNESS));
-      mouth_fillet.setPosition(upper_mouth_vertices.front().x, upper_mouth_vertices.front().y);
-      renderWindow.draw(mouth_fillet);
-      mouth_fillet.setPosition(upper_mouth_vertices.back().x, upper_mouth_vertices.back().y);
-      renderWindow.draw(mouth_fillet);
-    }
-
-
     // eyebrows
     if(show_eybrows) {
 
@@ -831,7 +792,14 @@ int main(int argc, char **argv) {
       renderWindow.draw(eyebrow_points, t);
     }
 
-    nose.draw(renderWindow);
+
+    //mouth
+    mouth.draw(renderWindow, frame_delta_time);
+
+
+    // nose
+    nose.draw(renderWindow, frame_delta_time);
+
 
 
 
@@ -853,38 +821,6 @@ int main(int argc, char **argv) {
       // right eyebrow reference mark
       reference_marker.setPosition(right_eye_reference_x, eyebrow_reference_y);
       renderWindow.draw(reference_marker);
-
-      // mouth reference mark
-      reference_marker.setPosition(mouth_reference_x, mouth_reference_y);
-      renderWindow.draw(reference_marker);
-
-      //mouth bezier marks
-      MouthBezierPoints translated_points = curr_mouth_points.transform(mouth_reference_x, mouth_reference_y, mouth_scaling_x, mouth_scaling_y);
-
-      bezier_marker.setPosition(translated_points.upper_start.x, translated_points.upper_start.y);
-      renderWindow.draw(bezier_marker);
-
-      bezier_marker.setPosition(translated_points.upper_end.x, translated_points.upper_end.y);
-      renderWindow.draw(bezier_marker);
-
-      bezier_marker.setPosition(translated_points.upper_start_control.x, translated_points.upper_start_control.y);
-      renderWindow.draw(bezier_marker);
-
-      bezier_marker.setPosition(translated_points.upper_end_control.x, translated_points.upper_end_control.y);
-      renderWindow.draw(bezier_marker);
-
-      bezier_marker.setPosition(translated_points.lower_start.x, translated_points.lower_start.y);
-      renderWindow.draw(bezier_marker);
-
-      bezier_marker.setPosition(translated_points.lower_end.x, translated_points.lower_end.y);
-      renderWindow.draw(bezier_marker);
-
-      bezier_marker.setPosition(translated_points.lower_start_control.x, translated_points.lower_start_control.y);
-      renderWindow.draw(bezier_marker);
-
-      bezier_marker.setPosition(translated_points.lower_end_control.x, translated_points.lower_end_control.y);
-      renderWindow.draw(bezier_marker);
-
 
     }
 

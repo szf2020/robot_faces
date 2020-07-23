@@ -42,7 +42,7 @@ class Nose : public Element {
       INVERTED_TRIANGLE
     };
 
-    void draw(sf::RenderWindow& renderWindow) override {
+    void draw(sf::RenderWindow& renderWindow, const float frame_delta_time) override {
 
 
 

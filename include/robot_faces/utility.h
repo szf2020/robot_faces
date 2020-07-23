@@ -112,30 +112,10 @@ struct MouthBezierPoints {
     bool closeEnough(const MouthBezierPoints &, const float) const;
     MouthBezierPoints transform(const int, const int, const float, const float);
     void moveTowards(const MouthBezierPoints&, const float, const float);
-    void setPoint(const std::string& key, const std::string& x, const std::string& y);
+    // void setPoint(const std::string& key, const std::string& x, const std::string& y);
     std::vector<sf::Vector2f> generateCurve(int) const;
 };
 
-/*
-std::vector<sf::Vector2f> computeBezierCurve(
-        const sf::Vector2f& start,
-        const sf::Vector2f& end,
-        const sf::Vector2f& startControl,
-        const sf::Vector2f& endControl) {
-
-	const int NUM_SEGMENTS = 20;
-	std::vector<sf::Vector2f> result;
-
-	result.push_back(start);
-	float p = 1.f / NUM_SEGMENTS;
-	float q = p;
-	for (size_t i = 1; i < NUM_SEGMENTS; i++, p += q) { // Generate all between
-		result.push_back(p * p * p * (end + 3.f * (startControl - endControl) - start) + 3.f * p * p * (start - 2.f * startControl + endControl) + 3.f * p * (startControl - start) + start);
-	}
-	result.push_back(end);
-	return result;
-}
-*/
 
 std::vector<sf::Vector2f> MouthBezierPoints::generateCurve(int u) const {
 
@@ -186,7 +166,7 @@ bool MouthBezierPoints::operator== (const MouthBezierPoints &other_point) const 
 }
 
 
-
+/*
 void MouthBezierPoints::setPoint(const std::string& key, const std::string& x, const std::string& y) {
     if (key == "upper_start") upper_start = sf::Vector2f(strtof(x.c_str(),0), strtof(y.c_str(),0)); return;
     if (key == "upper_end") upper_end = sf::Vector2f(strtof(x.c_str(),0), strtof(y.c_str(),0)); return;
@@ -197,6 +177,7 @@ void MouthBezierPoints::setPoint(const std::string& key, const std::string& x, c
     if (key == "lower_start_control") lower_start_control = sf::Vector2f(strtof(x.c_str(),0), strtof(y.c_str(),0)); return;
     if (key == "lower_end_control") lower_end_control = sf::Vector2f(strtof(x.c_str(),0), strtof(y.c_str(),0)); return;
 }
+*/
 
 
 bool MouthBezierPoints::closeEnough(const MouthBezierPoints &other_point, const float threshold) const {
